@@ -1,0 +1,246 @@
+<context>
+# Overview  
+Project North Star is a comprehensive Engineering Impact Framework designed to provide data-driven visibility into development work across our entire organization. Currently, our engineering team operates with fragmented data, making it impossible to answer fundamental business questions objectively - particularly around the ROI of AI-enhanced development tools. We have activity metrics (commits, tickets) but lack true impact and velocity metrics that distinguish between traditional development and AI-assisted work. This framework addresses this critical visibility gap by creating a unified analysis pipeline that enriches raw development data with AI-driven scoring to measure actual engineering impact, with special focus on understanding how AI tools are transforming our development velocity and quality.
+
+# Core Features  
+## 1. Multi-Repository Data Collection
+- **Organization-Wide Scope**: Analyzes ALL active repositories, not just a single codebase
+- **High-Context PR Channel**: Processes Pull Requests with rich metadata (titles, descriptions, discussions)
+- **Low-Context Commit Channel**: Analyzes standalone commits that bypass the PR process
+- **Linear Ticket Integration**: Links PRs to Linear tickets to measure process compliance
+- **Deduplication Logic**: Prevents double-counting of commits that are part of PRs
+- **AI-Assistance Detection**: Identifies work done with AI tools (Copilot, Claude, Cursor) through commit patterns and co-authorship markers
+- **Developer Override System**: Configurable list of developers who are known to be 100% AI-assisted (e.g., Chad), ensuring accurate attribution even when detection patterns are absent
+
+## 2. AI-Powered Analysis Engine
+- **Work Type Classification**: Automatically categorizes work into New Feature, Bug Fix, Refactor, Testing, Documentation, or Chore
+- **Multi-Dimensional Scoring**: Evaluates complexity (1-10), risk (1-10), and clarity (1-10) for each unit of work
+- **Contextual Summaries**: Generates one-sentence analysis summaries for quick understanding
+
+## 3. Unified Data Output
+- **Comprehensive CSV Format**: Single source of truth combining all analyzed data
+- **Impact Score Calculation**: Weighted composite metric (40% complexity + 50% risk + 10% clarity)
+- **Process Compliance Tracking**: Shows percentage of work linked to Linear tickets
+- **Metadata Preservation**: Maintains author, date, lines added/deleted, files changed, source URLs, and ticket references
+- **Developer Metrics Aggregation**: Weekly rollups of commit frequency, PR size, and AI usage patterns
+- **Incremental Updates**: Append new data without duplicating existing records
+- **State Management**: Track last run date and processed IDs to enable efficient updates
+
+## 4. Real-Time PR Analysis Bot
+- **GitHub Actions Integration**: Automatically analyze new PRs as they're created/updated
+- **Instant Scoring**: Apply AI analysis in real-time during PR workflow
+- **PR Comments**: Bot adds analysis summary and scores directly to PR
+- **Labels/Metadata**: Automatically tag PRs with complexity, risk levels, and compliance status
+
+# User Experience  
+## User Personas
+- **VPE/CTO**: Needs strategic visibility into engineering productivity, ROI, and the impact of AI tool adoption
+- **Engineering Managers**: Require tactical insights for team performance, resource allocation, and comparative analysis between AI-enhanced and traditional development approaches
+- **Individual Contributors**: Benefit from understanding their impact beyond raw commit counts and how AI tools affect their productivity
+
+## Key User Flows
+1. **Pilot Execution**: Run extraction scripts → Execute analysis → Review unified CSV output
+2. **Data Review**: Open CSV → Verify structure → Spot-check AI analysis against source code
+3. **Insights Generation**: Aggregate metrics → Identify patterns → Make data-driven decisions
+
+## UI/UX Considerations
+- Command-line interface for technical users
+- CSV output format for easy import into analysis tools
+- Progress indicators during LLM processing
+- Clear error messages for debugging
+</context>
+<PRD>
+# Technical Architecture  
+## System Components
+- **Data Extraction Layer**: Bash scripts leveraging GitHub CLI (`gh`) for API access
+- **Analysis Engine**: Python script using Anthropic's Claude Sonnet 4 API
+- **Data Processing**: Pandas for data manipulation and CSV generation
+- **State Management**: JSON file tracking processed commits/PRs and last run timestamp
+- **Authentication**: Environment variables for secure API key management
+- **Configuration Layer**: Developer override settings for AI attribution
+- **GitHub Actions Bot**: Workflow for real-time PR analysis and scoring
+
+## Data Models
+```
+UnifiedData {
+  Repository: string (repo name)
+  Date: string (ISO format)
+  Author: string (email/username)
+  SourceType: enum ['PR', 'Commit']
+  SourceURL: string (GitHub URL)
+  ContextLevel: enum ['High', 'Low']
+  WorkType: enum ['New Feature', 'Bug Fix', 'Refactor', 'Testing', 'Documentation', 'Chore']
+  complexity_score: number (1-10)
+  risk_score: number (1-10)
+  clarity_score: number (1-10)
+  analysis_summary: string
+  LinesAdded: number
+  LinesDeleted: number
+  FilesChanged: number (PR size indicator)
+  ImpactScore: number (calculated)
+  AIAssisted: boolean (detected AI tool usage)
+  AIToolType: string (Copilot, Claude, Cursor, etc. if detected)
+  LinearTicketID: string (e.g., "ENG-1234" if linked)
+  HasLinearTicket: boolean
+  ProcessCompliant: boolean (true if PR has Linear ticket)
+}
+
+DeveloperMetrics {
+  Author: string (email/username)
+  Period: string (e.g., "2025-W01" for week 1)
+  CommitFrequency: number (commits per day average)
+  PRFrequency: number (PRs per week)
+  AIUsageRate: number (percentage of AI-assisted work)
+  AvgPRSize: number (average files changed per PR)
+  AvgComplexity: number (average complexity score)
+  AvgImpactScore: number (average impact score)
+}
+```
+
+## APIs and Integrations
+- **GitHub API**: Via `gh` CLI for PR and commit data extraction
+- **Linear API**: Extract ticket metadata and link to PRs (requires Linear API key)
+- **Anthropic API**: Claude Sonnet 4 (model: claude-sonnet-4-20250514) for AI analysis
+- **Git**: Direct repository access for commit diffs and history
+
+## Infrastructure Requirements
+- Git and GitHub CLI installed and authenticated
+- Python 3.x with pandas, python-dotenv, and anthropic packages
+- Network access to GitHub and Anthropic APIs
+- Local storage for cloned repository and output files
+
+# Development Roadmap  
+## Phase 1A: V1 Pilot Study (Current)
+- Extract 7 days of data from ALL organization repositories
+- Extract Linear ticket data and match to PRs via ticket IDs in PR titles/bodies
+- Process through multi-repo dual-channel analysis pipeline
+- Identify and flag AI-assisted development work
+- Measure process compliance (% of work with Linear tickets)
+- Compare productivity metrics between AI-enhanced and traditional developers
+- Validate methodology with comprehensive organizational dataset
+- Establish baseline for time/cost per unit of work across all teams
+
+## Phase 1B: Full Historical Analysis
+- Apply validated methodology to complete repository history
+- Implement incremental update logic using state tracking
+- Scale infrastructure for larger data volumes
+- Implement batch processing and error recovery
+- Generate comprehensive historical impact metrics
+
+## Phase 1C: Real-Time Analysis Integration
+- Deploy GitHub Actions PR analysis bot
+- Configure bot to analyze new PRs automatically
+- Add PR comments with scores and analysis
+- Create webhooks for Linear ticket validation
+- Enable daily/weekly incremental updates to maintain current data
+
+## Phase 2: North Star Workflow Implementation
+- Design standardized development workflow based on Phase 1 insights
+- Implement lightweight process ensuring consistent data quality
+- Create real-time analysis capabilities
+- Build dashboard for ongoing visibility
+
+## Future Enhancements
+- Multi-repository support for organization-wide analysis
+- Custom work type taxonomies per team/project
+- Integration with project management tools (Jira, Linear)
+- Predictive analytics for sprint planning
+- Team performance benchmarking
+
+# Logical Dependency Chain
+1. **Foundation**: API authentication and environment setup
+2. **Configuration Setup**: Create AI developer override configuration (ai_developers.json)
+3. **State Management**: Initialize tracking system for processed records
+4. **Data Extraction**: Build commit and PR extraction scripts with incremental capability
+5. **Core Analysis**: Implement LLM integration and prompt engineering
+6. **AI Attribution Logic**: Apply both detection patterns and override configuration
+7. **Data Unification**: Merge channels with deduplication logic
+8. **Incremental Logic**: Check state file, skip already-processed items, append new data
+9. **Output Generation**: Create/append to structured CSV with calculated metrics
+10. **State Update**: Save processed IDs and timestamp for next run
+11. **GitHub Actions Bot**: Deploy real-time PR analysis workflow
+12. **Validation**: Manual review and methodology refinement
+13. **Automation**: Schedule regular incremental updates (daily/weekly)
+14. **Continuous Improvement**: Iterate based on user feedback
+
+# Risks and Mitigations  
+## Technical Challenges
+- **Multi-Repo Complexity**: Handle different branching strategies and repository structures
+- **API Rate Limits**: Implement exponential backoff and batch processing (more critical with multiple repos)
+- **LLM Context Windows**: Truncate diffs to 4000 characters while preserving key changes
+- **Data Quality Variance**: Acknowledge limitations explicitly in analysis
+- **AI Tool Detection**: May miss some AI usage if developers don't use standard co-authorship patterns
+
+## Implementation Risks
+- **Incomplete Historical Data**: Some commits may lack proper context; flag these as low-confidence
+- **Model Consistency**: Lock to specific model version (claude-sonnet-4-20250514) for reproducibility
+- **Cost Management**: Monitor API usage; pilot provides baseline for budgeting
+
+## Resource Constraints
+- **Processing Time**: Pilot estimates ~1 second per work unit; plan accordingly for full analysis
+- **Storage Requirements**: Ensure adequate space for repository clones and output files
+- **Team Adoption**: Phase implementation to demonstrate value before requiring process changes
+
+# Appendix  
+## Configuration Requirements
+- GitHub organization name must be set in extraction scripts
+- Linear API key must be configured for ticket extraction
+- Anthropic API key must be valid and have sufficient credits
+- Date command syntax varies between macOS and Linux (documented in scripts)
+- AI Developer Override configuration file (ai_developers.json):
+  ```json
+  {
+    "always_ai_developers": [
+      {
+        "username": "chad",
+        "email": "chad@company.com",
+        "ai_tool": "Claude/Cursor",
+        "percentage": 100
+      }
+    ]
+  }
+  ```
+- State tracking file (analysis_state.json):
+  ```json
+  {
+    "last_run_date": "2025-07-08T10:30:00Z",
+    "processed_pr_ids": ["PR-1234", "PR-1235"],
+    "processed_commit_shas": ["abc123", "def456"],
+    "total_records_processed": 1523
+  }
+  ```
+- GitHub Actions workflow (.github/workflows/pr-analysis.yml) for real-time scoring
+
+## Incremental Update Process
+1. **Initial Run**: Analyzes specified date range, creates baseline CSV files
+2. **Subsequent Runs**: 
+   - Reads analysis_state.json to get last run date and processed IDs
+   - Queries only for new commits/PRs since last run
+   - Skips any IDs already in processed lists (handles edge cases)
+   - Appends new records to existing CSV files
+   - Updates state file with new processed IDs and timestamp
+3. **Deduplication**: Uses commit SHA and PR ID as unique keys to prevent duplicates
+4. **GitHub Actions Bot**: Provides real-time analysis for new PRs as they're created
+
+## Expected Outputs
+- `org_commits.csv`: Raw commit data from all active repositories (appended incrementally)
+- `org_prs.csv`: Merged PR metadata across the organization with Linear ticket references and file counts (appended incrementally)
+- `unified_pilot_data.csv`: Final enriched analysis output with repository attribution, AI-assistance flags, PR size, and process compliance
+- `developer_metrics.csv`: Aggregated weekly developer metrics including commit frequency, PR frequency, and AI usage rates
+- `analysis_state.json`: Tracks processing history for incremental updates
+- Key metrics will enable:
+  - Velocity comparison between AI-enhanced vs traditional developers
+  - Repository-level productivity analysis
+  - Team member performance evaluation with AI adoption context
+  - Process compliance percentage (% of PRs with Linear tickets)
+  - Identification of ad-hoc work vs planned work
+  - PR size trends (files changed) as leading indicator of complexity
+  - Commit frequency patterns showing developer velocity
+  - AI adoption rates across different teams and repositories
+
+## Success Metrics
+- Pipeline executes without errors
+- AI classifications align with human assessment in 80%+ of spot checks
+- Processing completes within reasonable time/cost bounds
+- Output data structure supports planned analytics use cases
+</PRD>

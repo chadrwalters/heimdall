@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tm list:*)",
+      "Bash(/Users/chadwalters/source/work/metrics/.venv/bin/python scripts/verify_apis.py)",
+      "Bash(python:*)",
+      "Bash(tm show:*)",
+      "Bash(task-master:*)",
+      "Bash(just lint)",
+      "Bash(ruff check:*)",
+      "Bash(ruff format:*)",
+      "Bash(just test-unit:*)",
+      "Bash(rg:*)",
+      "Bash(just schedule-help:*)",
+      "Bash(./scripts/schedule_analysis.sh:*)",
+      "Bash(just test:*)",
+      "Bash(uv run:*)"
+    ],
+    "deny": []
+  }
+}

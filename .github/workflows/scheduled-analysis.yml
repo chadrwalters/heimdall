@@ -1,0 +1,131 @@
+name: Scheduled North Star Analysis
+
+on:
+  schedule:
+    # Run daily at 6 AM UTC (adjust timezone as needed)
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    # Allow manual triggering
+    inputs:
+      organization:
+        description: 'GitHub organization to analyze'
+        required: true
+        type: string
+      mode:
+        description: 'Analysis mode'
+        required: true
+        default: 'incremental'
+        type: choice
+        options:
+          - incremental
+          - pilot
+          - full
+      days:
+        description: 'Number of days to analyze (for pilot/full mode)'
+        required: false
+        default: '7'
+        type: string
+      force:
+        description: 'Force reprocessing of existing data'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+
+jobs:
+  scheduled-analysis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+          
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        
+      - name: Install dependencies
+        run: |
+          uv venv
+          uv pip sync pyproject.toml
+          
+      - name: Validate environment
+        run: |
+          source .venv/bin/activate
+          python -c "
+          import os
+          required = ['GITHUB_TOKEN', 'ANTHROPIC_API_KEY']
+          missing = [var for var in required if not os.getenv(var)]
+          if missing:
+              print(f'Missing required environment variables: {missing}')
+              exit(1)
+          print('✅ All required environment variables are set')
+          "
+          
+      - name: Create output directory
+        run: mkdir -p analysis-output
+        
+      - name: Run incremental analysis (scheduled)
+        if: github.event_name == 'schedule'
+        run: |
+          source .venv/bin/activate
+          python main.py \
+            --org ${{ vars.GITHUB_ORG || 'your-org-name' }} \
+            --mode incremental \
+            --output-dir analysis-output \
+            --log-file analysis-output/pipeline.log \
+            --log-level INFO
+            
+      - name: Run manual analysis (workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          source .venv/bin/activate
+          python main.py \
+            --org ${{ github.event.inputs.organization }} \
+            --mode ${{ github.event.inputs.mode }} \
+            --days ${{ github.event.inputs.days || '7' }} \
+            --output-dir analysis-output \
+            --log-file analysis-output/pipeline.log \
+            --log-level INFO \
+            ${{ github.event.inputs.force == 'true' && '--force' || '' }}
+            
+      - name: Upload analysis results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: analysis-results-${{ github.run_number }}
+          path: |
+            analysis-output/
+            !analysis-output/checkpoint_*.json
+          retention-days: 30
+          
+      - name: Archive logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pipeline-logs-${{ github.run_number }}
+          path: analysis-output/pipeline.log
+          retention-days: 7
+          
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::North Star analysis pipeline failed"
+          echo "Check the pipeline logs artifact for detailed error information"
+          
+      # Optional: Send results to external system
+      # - name: Send results to data warehouse
+      #   if: success()
+      #   run: |
+      #     # Add your custom script here to send results to your data warehouse
+      #     # Example: upload to S3, send to BigQuery, etc.
+      #     echo "Results ready for external processing"

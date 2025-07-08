@@ -1,0 +1,719 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Setup Environment and Authentication",
+        "description": "Configure the development environment with all required dependencies and setup authentication for GitHub, Linear, and Anthropic APIs.",
+        "details": "1. Create a new repository for the North Star project\n2. Setup Python environment with required packages:\n   - pandas for data manipulation\n   - python-dotenv for environment variable management\n   - anthropic for API access\n3. Install GitHub CLI (gh) and ensure it's authenticated\n4. Create .env file with the following variables:\n   - GITHUB_TOKEN\n   - LINEAR_API_KEY\n   - ANTHROPIC_API_KEY\n5. Create a .gitignore file to exclude .env and other sensitive files\n6. Verify API access to all three services with simple test scripts\n7. Document setup process in README.md",
+        "testStrategy": "1. Verify environment setup with a requirements check script\n2. Test API connectivity to GitHub, Linear, and Anthropic\n3. Ensure authentication works by making sample API calls to each service\n4. Validate that environment variables are properly loaded",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create and configure repository",
+            "description": "Set up a new repository for the project with proper structure and configuration files",
+            "dependencies": [],
+            "details": "Create a new repository on GitHub or preferred platform. Initialize with README.md, .gitignore for the appropriate language, and license. Set up the basic folder structure including src, tests, docs, and config directories. Create initial configuration files like package.json or requirements.txt depending on the technology stack.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Install required dependencies",
+            "description": "Install and configure all necessary libraries, frameworks and development tools",
+            "dependencies": [
+              1
+            ],
+            "details": "Based on the project requirements, identify and install all necessary dependencies. Document versions in the appropriate dependency management file. Set up any development tools like linters, formatters, and testing frameworks. Configure build tools if needed. Verify all dependencies are working correctly by running basic tests.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Set up and verify API authentication",
+            "description": "Configure API credentials and verify authentication is working properly",
+            "dependencies": [
+              2
+            ],
+            "details": "Obtain necessary API keys or credentials from the service provider. Set up secure environment variables or configuration files to store credentials (avoid committing secrets to the repository). Create a simple authentication test script to verify connectivity and proper authentication with the API. Document the authentication process for team members.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Implement Configuration Management",
+        "description": "Create configuration files for AI developer overrides and state management to track processed records.",
+        "details": "1. Create ai_developers.json configuration file with the structure specified in the PRD:\n```json\n{\n  \"always_ai_developers\": [\n    {\n      \"username\": \"chad\",\n      \"email\": \"chad@company.com\",\n      \"ai_tool\": \"Claude/Cursor\",\n      \"percentage\": 100\n    }\n  ]\n}\n```\n2. Implement a configuration loader that reads this file\n3. Create analysis_state.json file with the structure specified in the PRD:\n```json\n{\n  \"last_run_date\": \"2025-07-08T10:30:00Z\",\n  \"processed_pr_ids\": [\"PR-1234\", \"PR-1235\"],\n  \"processed_commit_shas\": [\"abc123\", \"def456\"],\n  \"total_records_processed\": 1523\n}\n```\n4. Implement functions to read and update the state file\n5. Add validation to ensure configuration files are properly formatted",
+        "testStrategy": "1. Unit test configuration loading functions\n2. Verify error handling for malformed configuration files\n3. Test state file read/write operations\n4. Validate that state updates are persisted correctly",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "AI Developer Configuration Setup",
+            "description": "Create and implement the configuration file structure for AI developers",
+            "dependencies": [],
+            "details": "Implement the configuration file structure according to the JSON schema. Create the necessary directory structure for storing configuration files. Implement functions to read and write configuration files. Ensure proper error handling for file operations.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "State Management Implementation",
+            "description": "Develop the state management system for persisting and retrieving configuration data",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement functions to save and load state data. Create mechanisms for state versioning and history tracking. Develop utilities for state migration between versions. Ensure thread-safety for concurrent access to state data.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Validation Functionality",
+            "description": "Implement validation logic for configuration data integrity",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Create schema validation for configuration objects. Implement type checking and constraint validation. Develop error reporting mechanisms for invalid configurations. Add unit tests to verify validation functionality works correctly across different configuration scenarios.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Develop GitHub Data Extraction Scripts",
+        "description": "Create Bash scripts using GitHub CLI to extract PR and commit data from all organization repositories.",
+        "status": "done",
+        "dependencies": [
+          1,
+          2
+        ],
+        "priority": "high",
+        "details": "1. Create a script to list all active repositories in the organization\n2. Implement PR extraction script that:\n   - Uses `gh pr list` with appropriate filters for date ranges\n   - Extracts PR metadata (title, description, author, URL, etc.)\n   - Extracts the number of files changed for each PR to track PR size/complexity\n   - Handles pagination for large result sets\n   - Outputs data in a structured format (JSON or CSV)\n3. Implement commit extraction script that:\n   - Uses `gh api` to query commits within date range\n   - Extracts commit metadata (SHA, author, date, message, etc.)\n   - Handles pagination\n   - Outputs data in a structured format\n4. Add support for incremental extraction using the last_run_date from state file\n5. Implement exponential backoff for API rate limit handling\n6. Add progress indicators during extraction\n7. Ensure scripts work on both macOS and Linux (handle date command syntax differences)",
+        "testStrategy": "1. Test scripts with small date ranges to verify correct data extraction\n2. Validate pagination works by testing with repositories having many PRs/commits\n3. Test incremental extraction by running scripts multiple times\n4. Verify rate limit handling by monitoring API usage during extraction\n5. Test on both macOS and Linux environments\n6. Verify that the number of files changed is correctly extracted for PRs of various sizes",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Add files changed extraction to PR script",
+            "description": "Enhance the PR extraction script to include the number of files changed in each PR as a metric for PR size/complexity tracking.",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Implement Linear API Integration",
+        "description": "Develop functionality to extract Linear ticket data and match tickets to PRs via ticket IDs in PR titles/bodies.",
+        "details": "1. Create a Python module for Linear API interaction\n2. Implement functions to:\n   - Query tickets by ID\n   - Extract ticket metadata (status, assignee, etc.)\n   - Search for tickets created/updated within a date range\n3. Develop regex patterns to identify Linear ticket IDs in PR titles and descriptions (e.g., \"ENG-1234\")\n4. Create a matching algorithm that:\n   - Extracts ticket IDs from PR content\n   - Queries Linear API for corresponding tickets\n   - Associates PR data with ticket data\n5. Handle edge cases like multiple ticket references in a single PR\n6. Implement caching to reduce API calls for previously fetched tickets\n7. Add error handling for missing or inaccessible tickets",
+        "testStrategy": "1. Unit test Linear API client functions\n2. Test ticket ID extraction with various PR title/description formats\n3. Validate ticket-PR matching with known examples\n4. Test error handling with non-existent ticket IDs\n5. Verify caching reduces API calls for repeated ticket lookups",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          2
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Linear API Client",
+            "description": "Create a reusable API client for interacting with the Linear API",
+            "dependencies": [],
+            "details": "Develop a client class that handles authentication, request formatting, and response parsing for the Linear API. Include methods for fetching tickets, updating ticket status, and handling pagination. Ensure proper error handling for API-specific errors and implement request rate limiting.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Develop Ticket Data Extraction Logic",
+            "description": "Create functions to extract and normalize ticket data from Linear API responses",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement data extraction functions that parse Linear API responses and transform them into a consistent internal format. Include logic to handle different ticket states, priorities, and metadata. Create utility functions for searching and filtering tickets based on various criteria.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Build PR-Ticket Matching Algorithm",
+            "description": "Develop an algorithm to match PRs with Linear tickets based on content analysis",
+            "dependencies": [
+              2
+            ],
+            "details": "Create a robust algorithm that can identify Linear ticket IDs within PR titles, descriptions, and branch names. Implement pattern matching using regex and other text analysis techniques. Handle edge cases like multiple ticket references and ambiguous matches. Include confidence scoring for matches.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Caching and Error Handling",
+            "description": "Add caching mechanisms and comprehensive error handling to the integration",
+            "dependencies": [
+              3
+            ],
+            "details": "Develop a caching layer to minimize API calls and improve performance. Implement cache invalidation strategies based on time and events. Create comprehensive error handling that gracefully manages API failures, rate limits, and unexpected data formats. Add logging for debugging and monitoring purposes.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Develop AI Analysis Engine with Claude Integration",
+        "description": "Create the core analysis engine using Anthropic's Claude Sonnet 4 API to classify and score development work.",
+        "details": "1. Implement the Anthropic API client using the claude-sonnet-4-20250514 model\n2. Design prompt engineering for:\n   - Work type classification (New Feature, Bug Fix, Refactor, Testing, Documentation, Chore)\n   - Complexity scoring (1-10)\n   - Risk scoring (1-10)\n   - Clarity scoring (1-10)\n   - One-sentence analysis summaries\n3. Create functions to prepare PR/commit data for LLM analysis:\n   - Extract relevant context (title, description, diff)\n   - Truncate diffs to 4000 characters while preserving key changes\n   - Format data for prompt inclusion\n4. Implement batch processing to optimize API usage\n5. Add error handling and retry logic for API failures\n6. Create a caching mechanism to avoid reprocessing identical content\n7. Implement progress tracking during analysis",
+        "testStrategy": "1. Test prompt effectiveness with sample PR/commit data\n2. Validate classification accuracy against human-labeled examples\n3. Verify scoring consistency across similar inputs\n4. Test truncation logic preserves important context\n5. Measure API usage and optimize for cost efficiency\n6. Validate error handling with simulated API failures",
+        "priority": "high",
+        "dependencies": [
+          1,
+          2
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Claude API Client",
+            "description": "Create a robust client for interacting with the Claude API, handling authentication, request formatting, and response parsing.",
+            "dependencies": [],
+            "details": "Develop a modular client that abstracts Claude API interactions, handles rate limiting, manages API keys securely, and provides consistent error handling. Include methods for both synchronous and asynchronous requests, with configurable timeouts and retries.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Design Prompt Engineering Framework",
+            "description": "Create a flexible prompt engineering system for different analysis types (security vulnerabilities, code quality, performance issues, etc.).",
+            "dependencies": [
+              1
+            ],
+            "details": "Develop a template-based prompt system with placeholders for context insertion. Create specialized prompts for each analysis dimension with careful instructions to maximize Claude's analytical capabilities. Include prompt versioning to track effectiveness and enable A/B testing of different prompt strategies.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Context Preparation Pipeline",
+            "description": "Build a pipeline to prepare and optimize code diffs and relevant context for Claude analysis.",
+            "dependencies": [
+              1
+            ],
+            "details": "Create algorithms to intelligently truncate diffs while preserving critical context, extract relevant file sections, and include necessary project metadata. Implement strategies for handling large diffs through chunking and summarization. Ensure context includes file type information to improve analysis accuracy.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Develop Batch Processing Optimization",
+            "description": "Implement efficient batch processing for analyzing multiple files or large codebases with optimal API usage.",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Create a queuing system for batch analysis requests with priority handling. Implement parallel processing where appropriate while respecting API rate limits. Design aggregation logic to combine results from multiple API calls into coherent analysis reports.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement Caching and Error Recovery System",
+            "description": "Build a caching layer and robust error handling system to improve performance and reliability.",
+            "dependencies": [
+              1,
+              4
+            ],
+            "details": "Develop a multi-level caching strategy to store analysis results and reduce redundant API calls. Implement intelligent retry mechanisms for different failure scenarios. Create a logging system to track API interactions and errors for debugging. Design fallback strategies when the API is unavailable or returns unexpected results.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Implement AI Attribution Detection",
+        "description": "Develop logic to identify AI-assisted development work through commit patterns and co-authorship markers, with pattern detection as the primary identification method.",
+        "status": "completed",
+        "dependencies": [
+          2,
+          3
+        ],
+        "priority": "medium",
+        "details": "1. Implement pattern detection for common AI tool signatures:\n   - Co-authored-by markers in commit messages\n   - Specific commit patterns associated with tools like GitHub Copilot, Claude, Cursor\n   - Characteristic code structures or comment patterns\n2. Implement attribution logic that:\n   - Checks for explicit patterns in the commit/PR\n   - Sets appropriate AIAssisted and AIToolType fields\n3. Add confidence scoring for AI detection based on pattern detection strength\n4. Create functions to calculate AI usage rates per developer\n5. Document detection patterns and limitations\n6. Note: The ai_developers.json override system will be implemented in a future phase if needed",
+        "testStrategy": "1. Test pattern detection with known AI-assisted commits\n2. Test with mixed datasets containing both AI-assisted and traditional work\n3. Verify edge cases like partial AI assistance\n4. Validate AI usage rate calculations",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Pattern Detection Algorithms",
+            "description": "Develop algorithms to identify AI-generated content patterns in text submissions",
+            "dependencies": [],
+            "details": "Create heuristics for detecting common AI patterns including repetitive phrasing, unnatural transitions, consistent tone, lack of personal references, and generic examples. Implement detection for both GPT and other AI model fingerprints. Include false positive mitigation strategies.",
+            "status": "completed",
+            "testStrategy": "Comprehensive tests with 6 test cases covering various AI tool signatures including GitHub Copilot, Claude Code, Cursor, and other AI tools."
+          },
+          {
+            "id": 2,
+            "title": "Integrate Override Configuration System",
+            "description": "Develop a configuration system allowing administrators to override detection settings",
+            "dependencies": [
+              1
+            ],
+            "details": "Create a flexible configuration interface for administrators to adjust detection thresholds, whitelist specific patterns, and customize detection behavior. Implement persistence for these settings and ensure they properly override the default detection algorithms when specified.",
+            "status": "completed",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Develop Confidence Scoring Mechanism",
+            "description": "Create a scoring system that quantifies confidence levels in AI attribution detection",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Implement a weighted scoring algorithm that combines results from multiple detection patterns. Design a normalized confidence scale (0-100%) with appropriate thresholds for different confidence levels. Include uncertainty indicators for borderline cases and document the confidence calculation methodology.",
+            "status": "completed",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Usage Rate Calculation",
+            "description": "Create functionality to track and calculate AI usage rates across submissions",
+            "dependencies": [
+              3
+            ],
+            "details": "Develop metrics to track AI usage patterns over time, including per-user statistics, course-wide trends, and historical comparisons. Implement data aggregation methods that respect privacy concerns while providing meaningful insights on AI usage patterns. Create visualization-ready data outputs.",
+            "status": "completed",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Document Future Override System Requirements",
+            "description": "Document requirements for a potential future ai_developers.json override system",
+            "dependencies": [
+              1,
+              3
+            ],
+            "details": "Create documentation outlining how a future override system could be implemented to supplement pattern detection. Include specifications for the JSON structure, integration points with existing detection logic, and criteria for when such a system would be necessary.",
+            "status": "pending",
+            "testStrategy": "Review documentation for completeness and technical feasibility. Ensure it aligns with the current pattern detection implementation."
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Develop Data Unification and Processing Pipeline",
+        "description": "Create a unified data processing pipeline that merges PR and commit data with deduplication logic and calculates impact scores.",
+        "status": "done",
+        "dependencies": [
+          3,
+          4,
+          5,
+          6
+        ],
+        "priority": "high",
+        "details": "1. Implement pandas DataFrame operations to:\n   - Load PR and commit data from extraction scripts\n   - Identify and remove duplicate commits (those that are part of PRs)\n   - Merge Linear ticket data with PRs\n   - Apply AI analysis results to each work unit using detect_ai_assistance() from context_preparer.py\n2. Create the UnifiedData model with all fields specified in the PRD\n3. Implement Impact Score calculation: 40% complexity + 50% risk + 10% clarity\n4. Add process compliance tracking (HasLinearTicket and ProcessCompliant fields)\n5. Calculate metadata fields (LinesAdded, LinesDeleted, FilesChanged)\n6. Implement incremental processing using the state file:\n   - Skip already processed items\n   - Append only new data to existing output\n7. Add data validation to ensure all required fields are present\n8. Implement error handling for malformed or incomplete data\n9. Ensure proper integration with the AI detection system to populate ai_assisted boolean and ai_tool_type fields based on pattern detection",
+        "testStrategy": "1. Test deduplication logic with overlapping PR and commit data\n2. Validate impact score calculation with sample inputs\n3. Test incremental processing by running multiple times with new data\n4. Verify all required fields are correctly populated\n5. Test with edge cases like empty repositories or PRs without commits\n6. Validate AI attribution fields are correctly populated from the pattern detection system",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Data Loading Framework",
+            "description": "Create a robust framework for loading data from multiple sources into the unification pipeline",
+            "dependencies": [],
+            "details": "Design and implement a flexible data loading framework that can handle various data sources (databases, APIs, files). Include configuration options for connection parameters, authentication, and data format specifications. Implement proper error handling for connection failures and data format issues.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Develop Deduplication Algorithm",
+            "description": "Create an efficient algorithm to identify and merge duplicate records across data sources",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement fuzzy matching algorithms to identify potential duplicates based on configurable criteria. Design a merging strategy that preserves the most accurate and complete information when combining records. Include logging of merge decisions for auditability and create a mechanism for manual review of uncertain matches.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Integrate with Linear Ticket System",
+            "description": "Build integration with Linear to track data issues and synchronize status updates",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Implement API integration with Linear to create tickets for data quality issues discovered during processing. Design a two-way synchronization system to update pipeline status based on ticket resolution and vice versa. Include configuration for ticket assignment rules and priority calculation.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Develop Impact Score Calculation Module",
+            "description": "Create a system to calculate and track impact scores for data entities",
+            "dependencies": [
+              2
+            ],
+            "details": "Design algorithms to calculate impact scores based on data completeness, quality, and business relevance. Implement a storage mechanism for historical impact scores to track changes over time. Create visualization components to represent impact scores in dashboards and reports.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement Incremental Processing and Validation Framework",
+            "description": "Build a system for incremental data processing with comprehensive validation and error handling",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "Design an incremental processing system that efficiently handles only new or changed data. Implement comprehensive validation rules with configurable severity levels. Create an error handling framework that can recover from failures, retry operations, and maintain data consistency. Include detailed logging and monitoring capabilities.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Integrate AI Attribution Detection",
+            "description": "Integrate the completed AI detection system into the data processing pipeline",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Integrate the detect_ai_assistance() function from context_preparer.py into the data processing workflow. Ensure proper handling of the ai_assisted boolean and ai_tool_type fields in the unified data model based on pattern detection results. Add validation to verify AI attribution data is correctly populated for all processed items.",
+            "status": "done",
+            "testStrategy": "Test integration with sample data containing known AI-assisted work. Verify AI attribution fields are correctly populated in the unified data output. Test edge cases including mixed AI and non-AI contributions."
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Implement Developer Metrics Aggregation",
+        "description": "Create functionality to aggregate weekly developer metrics including commit frequency, PR frequency, and AI usage rates.",
+        "status": "done",
+        "dependencies": [
+          7
+        ],
+        "priority": "medium",
+        "details": "1. Implement the DeveloperMetrics model as specified in the PRD\n2. Create functions to:\n   - Group unified data by author and week\n   - Calculate CommitFrequency (commits per day average)\n   - Calculate PRFrequency (PRs per week)\n   - Calculate AIUsageRate (percentage of AI-assisted work) using the ai_assisted field from pattern-based detection\n   - Calculate AvgPRSize (average files changed per PR)\n   - Calculate AvgComplexity and AvgImpactScore\n3. Format week periods as \"YYYY-Wnn\" (e.g., \"2025-W01\")\n4. Implement incremental updates to developer metrics\n5. Create functions to identify trends over time\n6. Add validation to handle developers with no activity in a given week\n7. Add breakdown of AI usage by tool type using the ai_tool_type field from pattern detection",
+        "testStrategy": "1. Test aggregation with sample unified data\n2. Validate metrics calculations with known examples\n3. Test week period formatting\n4. Verify incremental updates work correctly\n5. Test with various activity patterns (high activity, low activity, no activity)\n6. Validate AI usage metrics correctly reflect the ai_assisted and ai_tool_type fields from pattern detection",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement data grouping by author and week",
+            "description": "Create a module to aggregate developer activity data by author and week timeframes",
+            "dependencies": [],
+            "details": "Design and implement a data structure that organizes developer activities by author ID and weekly time periods. Handle edge cases such as developers with no activity in certain weeks. Ensure the data structure supports efficient lookups for subsequent metric calculations.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Develop frequency metrics calculation",
+            "description": "Implement calculations for frequency-based metrics such as commit count, PR count, and activity frequency",
+            "dependencies": [
+              1
+            ],
+            "details": "Using the grouped data structure, calculate frequency metrics including: number of commits per week, number of PRs submitted/reviewed, lines of code added/removed, and overall activity frequency. Normalize metrics appropriately to account for different team sizes and project scopes.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement quality metrics calculation",
+            "description": "Create algorithms to measure code quality metrics such as PR approval rates, review thoroughness, and defect introduction rates",
+            "dependencies": [
+              1
+            ],
+            "details": "Develop calculations for quality-focused metrics including: PR approval/rejection rates, average review comments per PR, defect introduction rates, and code churn. Include statistical validation to ensure metrics accurately reflect developer performance.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Build trend analysis functionality",
+            "description": "Implement time-series analysis to identify trends in developer metrics over time",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Create algorithms to analyze trends in both frequency and quality metrics over time. Implement statistical methods to identify significant changes, seasonal patterns, and long-term trends. Develop visualization-ready data structures to support graphical representation of trends.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement AI usage metrics",
+            "description": "Create functionality to track and analyze AI tool usage patterns by developers",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Using the ai_assisted and ai_tool_type fields from the pattern detection system, calculate metrics on AI usage patterns including: overall AI assistance rate, breakdown by AI tool type, and changes in AI usage over time. Implement visualization-ready outputs for AI usage dashboards.",
+            "status": "done",
+            "testStrategy": "Test with sample data containing various AI tool signatures. Verify metrics correctly reflect the detected AI usage patterns. Test aggregation across different time periods."
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Implement Output Generation and State Management",
+        "description": "Create functionality to generate CSV output files and update the state tracking file for incremental updates.",
+        "status": "done",
+        "dependencies": [
+          7,
+          8
+        ],
+        "priority": "medium",
+        "details": "1. Implement functions to generate the following CSV files:\n   - org_commits.csv: Raw commit data\n   - org_prs.csv: PR metadata with Linear ticket references\n   - unified_pilot_data.csv: Enriched analysis output including AI attribution data from pattern detection\n   - developer_metrics.csv: Aggregated weekly metrics including AI usage rates\n2. Add support for appending to existing CSV files for incremental updates\n3. Implement state file updates:\n   - Update last_run_date\n   - Add newly processed PR IDs and commit SHAs\n   - Update total_records_processed count\n4. Add validation to ensure CSV files have the correct structure\n5. Implement error handling for file I/O operations\n6. Add logging for output generation process\n7. Ensure AI attribution fields (ai_assisted, ai_tool_type) from pattern detection are properly included in the output files",
+        "testStrategy": "1. Test CSV generation with sample data\n2. Validate incremental updates append correctly\n3. Test state file updates after processing\n4. Verify file structure matches expected format\n5. Test error handling with invalid data or file access issues\n6. Verify AI attribution data from pattern detection is correctly included in the output files",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement CSV file generation",
+            "description": "Create functionality to generate CSV files from the processed data",
+            "dependencies": [],
+            "details": "Develop a module that takes the processed data and converts it into properly formatted CSV files. Ensure proper handling of headers, data types, and special characters. Implement configurable options for CSV formatting (delimiters, quoting, etc.). Add error handling for file writing operations.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Develop incremental update support",
+            "description": "Implement functionality to update existing CSV files with new data rather than regenerating them completely",
+            "dependencies": [
+              1
+            ],
+            "details": "Create a mechanism to detect changes in the source data. Design an algorithm to efficiently update only the changed portions of the CSV files. Implement conflict resolution strategies for concurrent updates. Add validation to ensure data integrity during incremental updates.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Create state file management system",
+            "description": "Develop a system to track and manage the state of generated files for supporting incremental updates",
+            "dependencies": [
+              2
+            ],
+            "details": "Design a state file format to store metadata about generated CSV files (timestamps, checksums, record counts, etc.). Implement functions to read, update, and write state files. Create a recovery mechanism for handling interrupted operations. Add logging for state changes to facilitate debugging and auditing.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Ensure AI attribution data inclusion",
+            "description": "Verify that AI attribution data from pattern detection is properly included in all relevant output files",
+            "dependencies": [
+              1
+            ],
+            "details": "Update CSV generation functions to include ai_assisted and ai_tool_type fields from the pattern-based AI detection system. Add validation to ensure these fields are properly populated. Create summary statistics for AI usage in the output metadata.",
+            "status": "done",
+            "testStrategy": "Test with sample data containing various AI attribution patterns. Verify fields are correctly formatted in the output files. Test with edge cases including mixed AI and non-AI contributions."
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Develop GitHub Actions PR Analysis Bot",
+        "description": "Create a GitHub Actions workflow for real-time PR analysis and scoring that adds comments with analysis results.",
+        "details": "1. Create .github/workflows/pr-analysis.yml with the following components:\n   - Trigger on PR creation and updates\n   - Checkout code and setup Python environment\n   - Extract PR metadata using GitHub context\n   - Call the analysis engine to score the PR\n   - Format analysis results as a comment\n   - Post comment to the PR\n   - Add labels based on complexity and risk scores\n2. Implement a simplified version of the analysis engine for real-time use\n3. Create comment templates with scores and analysis summary\n4. Add logic to update existing comments rather than creating new ones\n5. Implement error handling for API failures\n6. Add configuration options for bot behavior",
+        "testStrategy": "1. Test workflow with sample PRs\n2. Validate comment formatting and content\n3. Test label application based on scores\n4. Verify comment updates work correctly\n5. Test error handling with simulated API failures\n6. Validate performance for large PRs",
+        "priority": "medium",
+        "dependencies": [
+          5
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create GitHub Actions workflow configuration",
+            "description": "Set up the GitHub Actions workflow YAML file that triggers on PR events and configures the environment for the analysis bot",
+            "dependencies": [],
+            "details": "Create a .github/workflows/pr-analysis.yml file that: 1) Triggers on PR open and PR update events, 2) Sets up the necessary runtime environment, 3) Configures GitHub token permissions for commenting and labeling, 4) Defines inputs/parameters for the analysis engine",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Adapt analysis engine for GitHub Actions",
+            "description": "Modify the existing analysis engine to work within the GitHub Actions environment and process PR content",
+            "dependencies": [
+              1
+            ],
+            "details": "Adapt the analysis engine to: 1) Accept PR content as input from the GitHub Actions context, 2) Extract relevant files and changes from the PR, 3) Perform the analysis within the Actions runtime constraints, 4) Output results in a format suitable for PR comments",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement PR comment formatting and posting",
+            "description": "Create a module to format analysis results as PR comments and post them to the PR thread",
+            "dependencies": [
+              2
+            ],
+            "details": "Develop functionality to: 1) Format analysis results into clear, structured Markdown, 2) Use GitHub API to check for existing bot comments, 3) Update existing comments rather than creating duplicates, 4) Handle error cases gracefully with informative messages",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement PR label application logic",
+            "description": "Add functionality to apply appropriate labels to PRs based on analysis results",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Create a system that: 1) Determines appropriate labels based on analysis severity/type, 2) Adds/removes labels via GitHub API, 3) Handles permission issues gracefully, 4) Documents the labeling schema for team reference",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Create Main Execution Script and Scheduling",
+        "description": "Develop the main script that orchestrates the entire pipeline and implement scheduling for regular incremental updates.",
+        "status": "done",
+        "dependencies": [
+          3,
+          4,
+          5,
+          7,
+          8,
+          9
+        ],
+        "priority": "high",
+        "details": "1. Create a main.py script that:\n   - Parses command-line arguments for date ranges and options\n   - Calls extraction scripts for GitHub and Linear data\n   - Processes data through the analysis engine\n   - Applies AI attribution detection using pattern-based detect_ai_assistance() from context_preparer.py\n   - Generates unified output and developer metrics\n   - Updates the state file\n2. Implement different execution modes:\n   - Full historical analysis\n   - Incremental update since last run\n   - Date range analysis\n3. Add progress reporting and estimated completion time\n4. Implement error handling and recovery\n5. Create a cron job or GitHub Actions workflow for scheduled execution\n6. Add logging throughout the pipeline\n7. Implement performance monitoring",
+        "testStrategy": "1. Test end-to-end execution with sample repositories\n2. Validate different execution modes\n3. Test scheduling with simulated time progression\n4. Verify error recovery works correctly\n5. Test with various input sizes to assess performance\n6. Validate logging provides adequate information for troubleshooting\n7. Verify pattern-based AI attribution detection is properly integrated in the pipeline",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Command-Line Interface",
+            "description": "Design and implement a command-line interface for the execution script that allows users to control the system's operation.",
+            "dependencies": [],
+            "details": "Create a robust CLI using argparse or click that supports various execution modes, parameter passing, and help documentation. Include options for running specific pipeline stages, debugging, verbose output, and configuration file specification. Ensure proper input validation and helpful error messages.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Develop Pipeline Orchestration Logic",
+            "description": "Create the core orchestration logic that coordinates the execution of different pipeline components in the correct order.",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement a pipeline executor that manages the flow between different processing stages. Include mechanisms to pass data between stages, track progress, and handle conditional execution paths. Design the orchestrator to be extensible for future pipeline components and to support both sequential and parallel execution where appropriate.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Scheduling Functionality",
+            "description": "Add scheduling capabilities to allow the pipeline to run at specified intervals or times.",
+            "dependencies": [
+              2
+            ],
+            "details": "Integrate with system scheduling tools (cron for Linux/Mac, Task Scheduler for Windows) or implement an internal scheduler. Include options for one-time execution, recurring execution, and conditional execution based on external triggers. Provide mechanisms to view, modify, and cancel scheduled runs.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Develop Error Recovery and Logging System",
+            "description": "Create a comprehensive error handling and logging system to ensure robustness and debuggability.",
+            "dependencies": [
+              2
+            ],
+            "details": "Implement structured logging with different verbosity levels. Create error recovery mechanisms including retry logic, graceful degradation, and state preservation for interrupted runs. Design a system to notify administrators of critical failures via email or other channels. Include detailed execution metrics and performance tracking.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Integrate AI Attribution Detection",
+            "description": "Ensure the main execution script properly integrates the pattern-based AI attribution detection functionality",
+            "dependencies": [
+              2
+            ],
+            "details": "Integrate the pattern-based detect_ai_assistance() function from context_preparer.py into the main execution flow. Add configuration options for AI detection sensitivity. Ensure proper error handling for AI detection failures. Add logging for AI detection results.",
+            "status": "done",
+            "testStrategy": "Test with repositories containing known AI-assisted contributions. Verify AI attribution is correctly applied in the pipeline output. Test with various configuration settings for pattern detection."
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "Documentation and Validation",
+        "description": "Create comprehensive documentation and implement validation procedures to ensure data quality and methodology correctness.",
+        "status": "done",
+        "dependencies": [
+          11
+        ],
+        "priority": "medium",
+        "details": "1. Create detailed documentation including:\n   - Setup instructions\n   - Usage guide with examples\n   - Configuration options\n   - Output format descriptions\n   - Methodology explanation including pattern-based AI detection approach\n   - Limitations and known issues\n   - Note about potential future ai_developers.json override system\n2. Implement validation procedures:\n   - Spot-check AI analysis against source code\n   - Compare AI classifications with human assessment\n   - Validate impact score calculations\n   - Verify process compliance detection\n3. Create a validation report template\n4. Implement data quality checks\n5. Document success metrics and how to measure them\n6. Create user guides for different personas (VPE/CTO, Engineering Managers, Individual Contributors)\n7. Document the pattern-based AI detection implemented in detect_ai_assistance()",
+        "testStrategy": "1. Review documentation for completeness and accuracy\n2. Test setup instructions on a fresh environment\n3. Validate methodology with sample data\n4. Verify data quality checks identify issues\n5. Test with different user personas to ensure needs are met\n6. Validate AI detection documentation against the implemented pattern detection",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create User Documentation",
+            "description": "Develop comprehensive user documentation that explains system functionality, features, and usage instructions in clear, accessible language.",
+            "dependencies": [],
+            "details": "Include step-by-step guides, screenshots, troubleshooting tips, and FAQs. Organize content logically with a table of contents, glossary of terms, and index. Ensure documentation addresses different user roles and experience levels. Review with stakeholders for clarity and completeness.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Develop Methodology Validation Procedures",
+            "description": "Create formal procedures to validate the methodologies used in the system, ensuring they meet requirements and produce expected results.",
+            "dependencies": [
+              1
+            ],
+            "details": "Define validation criteria and acceptance thresholds. Design test cases that verify methodology correctness. Create validation checklists and templates. Document the validation process itself, including roles, responsibilities, and sign-off procedures. Include procedures for handling methodology updates and changes.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Data Quality Verification Framework",
+            "description": "Establish a framework for ongoing data quality verification to ensure system data remains accurate, complete, and reliable.",
+            "dependencies": [
+              2
+            ],
+            "details": "Define data quality metrics and acceptable thresholds. Create automated data validation scripts where possible. Develop procedures for manual data quality checks. Establish reporting mechanisms for data quality issues. Document remediation processes for addressing identified data problems. Create a schedule for regular data quality reviews.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Document AI Detection Methodology",
+            "description": "Create detailed documentation of the pattern-based AI attribution detection system implemented in context_preparer.py",
+            "dependencies": [
+              1
+            ],
+            "details": "Document the pattern detection algorithms used for identifying different AI tools (GitHub Copilot, Claude Code, Cursor, etc.). Explain the confidence scoring system and how it affects attribution decisions. Include examples of detected patterns and potential false positives/negatives. Provide guidance on configuring and extending the pattern detection system. Note the potential for a future override system if needed.",
+            "status": "done",
+            "testStrategy": "Review documentation against the implemented code to ensure accuracy. Test examples provided in the documentation to verify they work as described. Have team members unfamiliar with the implementation review for clarity."
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-07-08T17:44:16.622Z",
+      "updated": "2025-07-08T22:44:42.821Z",
+      "description": "Tasks for master context"
+    }
+  }
+}

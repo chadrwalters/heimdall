@@ -1,0 +1,270 @@
+Of course. This is the correct approach: a single, comprehensive document that contains the strategic vision and the immediate, tactical execution plan. This allows an engineer to understand not just *what* to do, but *why* they are doing it.
+
+Here is the unified document.
+
+---
+
+### **Project North Star: Unified Engineering Impact Framework & V1 Pilot Study**
+
+*   **Document Type:** Strategic PRD & V1 Engineering Brief
+*   **Author:** VPE/CTO
+*   **Date:** 2025-07-08
+*   **Version:** 5.0 (Comprehensive)
+*   **Status:** For Technical Review & Execution
+
+### **Part 1: The Strategic Framework (The "Why")**
+
+#### **1.1. The Problem: We Have a Critical Visibility Gap**
+
+Our engineering team operates with fragmented data, making it impossible to answer fundamental business questions with objectivity. We cannot reliably measure the impact of our work, the effectiveness of our processes, or the ROI of new tools and methodologies. We have activity metrics (commits, tickets), but we lack true impact and velocity metrics. This forces us to rely on intuition rather than data, which is not a scalable or predictable way to run an engineering organization.
+
+#### **1.2. Acknowledged Limitations: The Messy Reality**
+
+We must recognize the inherent limitations of our historical data. Our analysis will be conducted with a clear understanding that:
+*   **Process has been inconsistent:** Some work follows a formal PR process; much does not.
+*   **Context is variable:** A Pull Request with a detailed description is rich with context. A raw commit on the `dev` branch is sparse. They are not equivalent.
+*   **Metrics can be misleading:** Lines of Code (LoC) does not equal value. Ticket counts do not equal impact.
+
+Our goal is not to ignore these limitations, but to build a framework that explicitly acknowledges and accounts for them.
+
+#### **1.3. The Vision: A Two-Phase Plan**
+
+Our strategy is divided into two distinct phases to manage this complexity:
+
+1.  **Phase 1: Retrospective Analysis (The V1 Pilot & Full Analysis).** We will first look backward. We will conduct a deep, quantitative analysis of development activity, enriching it with AI-driven scoring to create the most comprehensive picture possible from the data we *have*. The immediate next step is the V1 Pilot detailed in Part 2 of this document.
+2.  **Phase 2: The North Star Workflow (The Future State).** We will then look forward. Using the insights from Phase 1, we will implement a standardized, lightweight development workflow. The goal of this future state is to ensure that all data we generate from now on is clean, consistent, and provides the visibility we currently lack.
+
+---
+
+### **Part 2: The V1 Pilot Study (The Immediate "How")**
+
+#### **2.1. Objective & Scope**
+
+The goal of this pilot is to execute an end-to-end test of our analysis pipeline on a limited, recent dataset to validate our methodology, tools, and assumptions before applying it to our full history.
+
+*   **Repository:** `SpaceWalker`
+*   **Timeframe:** All merged PRs and commits to `main`/`dev` in the **last 7 days**.
+*   **LLM Model:** Anthropic's **Claude Sonnet 4**, for its enhanced coding analysis, hybrid reasoning capabilities, and improved performance.
+
+#### **2.2. Success Criteria**
+
+1.  **Successful Execution:** The entire pipeline runs without errors and produces a single `unified_pilot_data.csv` file.
+2.  **Correctness of Data:** The output correctly distinguishes between `PR` and `Commit` source types and avoids double-counting.
+3.  **Plausibility of Analysis:** A human spot-check of the output data confirms the LLM-generated `WorkType`, summaries, and scores are reasonable.
+4.  **Baseline Established:** We get a rough estimate of the time and cost per unit of work.
+
+#### **2.3. Implementation Details & Code**
+
+##### **2.3.1. Project Setup**
+
+Create the project with the following directory structure:
+```
+/engineering-analysis-pilot
+|-- .env
+|-- requirements.txt
+|-- extract_pilot_commits.sh
+|-- extract_pilot_prs.sh
+|-- analyze_pilot_data.py
+```
+
+*   **.env:** Contains the API key. **Do not commit this file to Git.**
+    ```
+    ANTHROPIC_API_KEY="sk-ant-..."
+    ```
+*   **requirements.txt:**
+    ```
+    pandas
+    python-dotenv
+    anthropic
+    ```
+
+##### **2.3.2. Data Extraction Scripts (Bash)**
+
+**`extract_pilot_commits.sh`**
+```bash
+#!/bin/bash
+# Extracts all commits from main/dev branches in the last 7 days.
+ORG="your-github-organization" # <--- Needs configuration
+REPO="SpaceWalker"
+SINCE_DATE=$(date -v-7d +%Y-%m-%d) # macOS syntax. For Linux use: date -d "7 days ago" +%Y-%m-%d
+BRANCHES=("main" "dev")
+OUTPUT_FILE="pilot_commits.csv"
+
+echo "CommitSHA,Date,Author,LinesAdded,LinesDeleted" > $OUTPUT_FILE
+# Clone repo if it doesn't exist
+[ -d "$REPO" ] || gh repo clone "$ORG/$REPO" -- --quiet
+cd $REPO
+git fetch --all --quiet
+# Log commits and use awk to format output
+git log "${BRANCHES[@]}" --since="$SINCE_DATE" --pretty=tformat:"%H,%cI,%ae" --numstat \
+| awk -F'[,	]' 'NF>1 {if ($0 ~ /^[a-f0-9]/) {sha=$1; date=$2; author=$3} else {added+=$1; deleted+=$2}} ENDFILE {if(sha) print sha","date","author","added","deleted"; sha="";added=0;deleted=0}' >> "../$OUTPUT_FILE"
+cd ..
+echo "Pilot commit extraction complete."
+```
+
+**`extract_pilot_prs.sh`**
+```bash
+#!/bin/bash
+# Extracts all merged PRs from the last 7 days.
+REPO="your-github-organization/SpaceWalker" # <--- Needs configuration
+SINCE_DATE=$(date -v-7d +%Y-%m-%d) # macOS syntax. For Linux use: date -d "7 days ago" +%Y-%m-%d
+OUTPUT_FILE="pilot_prs.csv"
+
+echo "URL,Author,Title,Additions,Deletions" > $OUTPUT_FILE
+gh search prs --repo "$REPO" --state merged --merged-at ">=$SINCE_DATE" --json url,author,title,additions,deletions --limit 100 \
+| jq -r '.[] | [.url, .author.login, .title, .additions, .deletions] | @csv' >> $OUTPUT_FILE
+echo "Pilot PR extraction complete."
+```
+
+##### **2.3.3. Analysis Script (Python)**
+
+**`analyze_pilot_data.py`**
+```python
+import os
+import pandas as pd
+import anthropic
+import subprocess
+import time
+from dotenv import load_dotenv
+
+# --- SETUP ---
+load_dotenv()
+anthropic.api_key = os.getenv("ANTHROPIC_API_KEY")
+client = anthropic.Anthropic()
+
+# --- PROMPT TEMPLATES ---
+PROMPT_PR = """
+You are an expert Principal Software Engineer. Analyze the following Pull Request data and respond ONLY with a valid JSON object.
+**Context:**
+- PR Title: {title}
+- PR Body: {body}
+- Code Diff:
+```diff
+{diff}
+```
+**Instructions:**
+Analyze the context. Classify work_type from ["New Feature", "Bug Fix", "Refactor", "Testing", "Documentation", "Chore"]. Score complexity, risk, and clarity from 1-10. Provide a one-sentence summary.
+**JSON Output:**
+{{
+  "work_type": "<string>", "complexity_score": <number>, "risk_score": <number>, "clarity_score": <number>, "analysis_summary": "<string>"
+}}
+"""
+
+PROMPT_COMMIT = """
+You are a code analysis bot. Based ONLY on the commit message and diff, infer the work type and estimate complexity and risk.
+**Context:**
+- Commit Message: {message}
+- Code Diff:
+```diff
+{diff}
+```
+**Instructions:**
+Infer the work_type from ["New Feature", "Bug Fix", "Refactor", "Testing", "Documentation", "Chore"]. Score complexity and risk from 1-10. Set clarity to 3, as there is no PR body. Provide a one-sentence summary.
+**JSON Output:**
+{{
+  "work_type": "<string>", "complexity_score": <number>, "risk_score": <number>, "clarity_score": 3, "analysis_summary": "<string>"
+}}
+"""
+
+def get_llm_analysis(prompt):
+    """Calls the Anthropic API and returns the parsed JSON response."""
+    try:
+        print("  Calling Claude Sonnet 4...")
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=512,
+            temperature=0.1,
+            messages=[{"role": "user", "content": prompt}]
+        ).content[0].text
+        # Clean up potential markdown code block
+        if message.startswith("```json"):
+            message = message[7:-4]
+        return pd.read_json(message, typ='series')
+    except Exception as e:
+        print(f"  !! LLM Error: {e}")
+        return None
+
+def main():
+    prs_df = pd.read_csv("pilot_prs.csv")
+    commits_df = pd.read_csv("pilot_commits.csv")
+    
+    unified_data = []
+    processed_commit_shas = set()
+
+    # --- HIGH-CONTEXT PR CHANNEL ---
+    print("\n--- Processing Pull Requests (High-Context) ---")
+    for _, pr in prs_df.iterrows():
+        print(f"Analyzing PR: {pr['URL']}")
+        body = subprocess.getoutput(f"gh pr view {pr['URL']} --json body -q .body")
+        diff = subprocess.getoutput(f"gh pr diff {pr['URL']} --color never")
+        commit_shas = subprocess.getoutput(f"gh pr view {pr['URL']} --json commits -q '.commits.[].oid'").split()
+        processed_commit_shas.update(commit_shas)
+
+        prompt = PROMPT_PR.format(title=pr['Title'], body=body, diff=diff[:4000]) # Truncate diff to fit context window
+        analysis = get_llm_analysis(prompt)
+        
+        if analysis is not None:
+            unified_data.append({
+                'Date': 'N/A', 'Author': pr['Author'], 'SourceType': 'PR', 'SourceURL': pr['URL'],
+                'ContextLevel': 'High', **analysis,
+                'LinesAdded': pr['Additions'], 'LinesDeleted': pr['Deletions']
+            })
+        time.sleep(1) # Simple rate limiting
+
+    # --- LOW-CONTEXT COMMIT CHANNEL ---
+    print("\n--- Processing Standalone Commits (Low-Context) ---")
+    for _, commit in commits_df.iterrows():
+        if commit['CommitSHA'] in processed_commit_shas:
+            continue
+        print(f"Analyzing Commit: {commit['CommitSHA'][:10]}")
+        details = subprocess.getoutput(f"cd SpaceWalker && git show {commit['CommitSHA']} --pretty=format:'%B' --stat")
+        message, _, diff = details.partition('\n')
+        
+        prompt = PROMPT_COMMIT.format(message=message, diff=diff[:4000])
+        analysis = get_llm_analysis(prompt)
+
+        if analysis is not None:
+            unified_data.append({
+                'Date': commit['Date'], 'Author': commit['Author'], 'SourceType': 'Commit', 'SourceURL': f"https://github.com/your-github-organization/SpaceWalker/commit/{commit['CommitSHA']}",
+                'ContextLevel': 'Low', **analysis,
+                'LinesAdded': commit['LinesAdded'], 'LinesDeleted': commit['LinesDeleted']
+            })
+        time.sleep(1)
+
+    # --- WRITE OUTPUT ---
+    output_df = pd.DataFrame(unified_data)
+    output_df['ImpactScore'] = (output_df['complexity_score'] * 0.4) + (output_df['risk_score'] * 0.5) + (output_df['clarity_score'] * 0.1)
+    output_df.to_csv("unified_pilot_data.csv", index=False)
+    print("\n✅ Pilot analysis complete! Review 'unified_pilot_data.csv'")
+
+if __name__ == "__main__":
+    main()
+```
+
+#### **2.4. Execution & Review Plan**
+
+**To Run the Pilot:**
+
+1.  **Setup:** Ensure `gh` CLI is authenticated. Place the `.env` file with the `ANTHROPIC_API_KEY` in the project root. Install dependencies:
+    ```bash
+    pip install -r requirements.txt
+    ```
+2.  **Configure:** Update the `ORG` variable inside the shell scripts to the correct GitHub organization name.
+3.  **Execute:** Run the scripts in order.
+    ```bash
+    ./extract_pilot_commits.sh
+    ./extract_pilot_prs.sh
+    python analyze_pilot_data.py
+    ```
+
+**To Review the Results:**
+
+1.  Open the generated `unified_pilot_data.csv` file.
+2.  **Verify Structure:** Check if columns match the spec and if `ContextLevel` has both `High` and `Low` values.
+3.  **Spot-Check Content:** Pick 2-3 rows. Click the `SourceURL` to view the work on GitHub. Compare the code with the `analysis_summary`, `WorkType`, and scores in the CSV. Do they align with your human assessment?
+4.  **Report Findings:** Document any discrepancies, successes, or suggestions for improving the LLM prompts.
+
+#### **2.5. Next Steps (Post-Pilot)**
+
+Based on the successful outcome of this pilot, we will proceed to Phase 1B: applying this validated methodology to the full historical dataset as originally planned.
+

@@ -48,3 +48,5 @@ org_commits.csv
 org_prs.csv
 unified_pilot_data.csv
 developer_metrics.csv
+
+.claude/

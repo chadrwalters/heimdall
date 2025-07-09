@@ -129,4 +129,4 @@ Each PR analysis uses one Claude API call. With Claude 3.5 Sonnet:
 - The workflow has minimal permissions (read contents, write PRs/issues)
 - API keys are stored as encrypted secrets
 - No repository code is sent outside of the diff analysis
-- The bot cannot modify code, only add comments and labels
+- The bot cannot modify code, only add comments and labels# Fix for PR description parsing

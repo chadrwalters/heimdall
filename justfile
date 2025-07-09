@@ -498,7 +498,7 @@ cache-rebuild:
 # Warm cache for upcoming analysis
 cache-warm organization days="7":
     @echo "🔥 Warming cache for {{ organization }} (last {{ days }} days)..."
-    @python -c "import asyncio; from src.analysis.analysis_engine import AnalysisEngine; from src.analysis.cache_warmer import CacheWarmer; async def warm(): engine = AnalysisEngine(); warmer = CacheWarmer(engine); results = await warmer.warm_recent_prs('{{ organization }}', days={{ days }}); print(f'✅ Warmed {results[\"warmed_count\"]} entries'); print(f'📊 Already cached: {results[\"already_cached\"]}'); print(f'📦 Total cache size: {results[\"cache_size\"]}'); stats = warmer.get_warming_stats(); print(f'📈 Cache hit rate: {stats[\"cache_hit_rate\"]:.1%}'); asyncio.run(warm())"
+    @python -c "from src.analysis.analysis_engine import AnalysisEngine; from src.analysis.cache_warmer import CacheWarmer; engine = AnalysisEngine(); warmer = CacheWarmer(engine); results = warmer.warm_recent_prs('{{ organization }}', days={{ days }}); print(f'✅ Warmed {results[\"warmed_count\"]} entries'); print(f'📊 Already cached: {results[\"already_cached\"]}'); print(f'📦 Total cache size: {results[\"cache_size\"]}'); stats = warmer.get_warming_stats(); print(f'📈 Cache hit rate: {stats[\"cache_hit_rate\"]:.1%}')"
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                             SAFETY HELPERS                                 ║

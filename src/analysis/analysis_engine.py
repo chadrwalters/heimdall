@@ -84,19 +84,44 @@ class AnalysisEngine:
 
     def _check_memory_usage(self) -> None:
         """Check memory usage using enhanced memory manager."""
-        stats = self.memory_manager.get_memory_stats()
-        pressure = self.memory_manager.get_memory_pressure_level()
-
-        if pressure == "warning":
-            logger.warning(
-                f"Memory pressure: {stats.percent_used:.1%} "
-                f"({stats.used_mb:.1f}MB used, {stats.available_mb:.1f}MB available)"
-            )
-        elif pressure == "critical":
-            logger.critical(
-                f"Critical memory pressure: {stats.percent_used:.1%} "
-                f"({stats.used_mb:.1f}MB used, {stats.available_mb:.1f}MB available)"
-            )
+        try:
+            stats = self.memory_manager.get_memory_stats()
+            pressure = self.memory_manager.get_memory_pressure_level()
+            
+            if pressure == "warning":
+                logger.warning(
+                    f"Memory pressure: {stats.percent_used:.1%} "
+                    f"({stats.used_mb:.1f}MB used, {stats.available_mb:.1f}MB available)"
+                )
+            elif pressure == "critical":
+                logger.critical(
+                    f"Critical memory pressure: {stats.percent_used:.1%} "
+                    f"({stats.used_mb:.1f}MB used, {stats.available_mb:.1f}MB available)"
+                )
+                # Clear cache if memory is critically high
+                self.clear_cache()
+        except Exception as e:
+            logger.warning(f"Memory monitoring failed, falling back to basic monitoring: {e}")
+            # Fallback to basic psutil monitoring
+            try:
+                import psutil
+                memory_info = psutil.virtual_memory()
+                memory_percent = memory_info.percent / 100
+                settings = get_settings()
+                
+                if memory_percent > settings.processing_limits.memory_warning_threshold:
+                    logger.warning(
+                        f"High memory usage: {memory_percent:.1%}. "
+                        f"Consider reducing batch size or cache size."
+                    )
+                    
+                    # Clear cache if critically high
+                    critical_threshold = min(settings.processing_limits.memory_warning_threshold + 0.1, 0.95)
+                    if memory_percent > critical_threshold:
+                        logger.warning(f"Memory critically high ({memory_percent:.1%}) - clearing cache")
+                        self.clear_cache()
+            except Exception as fallback_e:
+                logger.debug(f"Fallback memory monitoring also failed: {fallback_e}")
 
     def _get_memory_stats(self) -> dict[str, Any]:
         """Get current memory statistics."""

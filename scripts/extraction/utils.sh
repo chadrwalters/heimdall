@@ -231,8 +231,16 @@ clean_cache() {
         
         # Remove oldest files until under limit
         while [ "$cache_size_mb" -gt "$max_cache_size_mb" ]; do
-            # Find oldest cache file
-            local oldest_file=$(find "$cache_dir" -name "*.json" -type f -printf '%T+ %p\n' 2>/dev/null | sort | head -1 | cut -d' ' -f2-)
+            # Find oldest cache file (cross-platform compatible)
+            local oldest_file=""
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+                # macOS: use stat with -f flag
+                oldest_file=$(find "$cache_dir" -name "*.json" -type f -exec stat -f "%m %N" {} \; 2>/dev/null | sort -n | head -1 | cut -d' ' -f2-)
+            else
+                # Linux: use stat with -c flag
+                oldest_file=$(find "$cache_dir" -name "*.json" -type f -exec stat -c "%Y %n" {} \; 2>/dev/null | sort -n | head -1 | cut -d' ' -f2-)
+            fi
+            
             if [ -n "$oldest_file" ] && [ -f "$oldest_file" ]; then
                 rm -f "$oldest_file"
                 ((cleaned_count++))

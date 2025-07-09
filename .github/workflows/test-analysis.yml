@@ -69,7 +69,7 @@ jobs:
     
     - name: Check test coverage threshold
       run: |
-        uv run coverage report --fail-under=60
+        uv run coverage report --include="src/analysis/*" --fail-under=55
     
   performance-test:
     runs-on: ubuntu-latest

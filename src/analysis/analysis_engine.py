@@ -9,7 +9,7 @@ from typing import Any
 import psutil
 from cachetools import TTLCache
 
-from ..config.constants import ProcessingLimits
+from ..config.schemas import load_settings
 from ..exceptions import (
     AnalysisError,
     APIError,
@@ -29,17 +29,22 @@ class AnalysisEngine:
         self.claude_client = ClaudeClient(api_key=api_key)
         self.prompt_engineer = PromptEngineer()
         self.context_preparer = ContextPreparer()
-
+        
+        # Load settings
+        settings = load_settings()
+        
         # Set safe defaults with limits
         self.max_workers = min(
-            max_workers or ProcessingLimits.MAX_WORKERS_DEFAULT, ProcessingLimits.MAX_WORKERS_MAX
+            max_workers or settings.processing_limits.max_workers_default, 
+            settings.processing_limits.max_workers_max
         )
 
         # Use TTL cache with size limit
         cache_size = min(
-            cache_size or ProcessingLimits.CACHE_SIZE_DEFAULT, ProcessingLimits.CACHE_SIZE_MAX
+            cache_size or settings.processing_limits.cache_size_default, 
+            settings.processing_limits.cache_size_max
         )
-        self.results_cache = TTLCache(maxsize=cache_size, ttl=ProcessingLimits.CACHE_TTL_SECONDS)
+        self.results_cache = TTLCache(maxsize=cache_size, ttl=settings.processing_limits.cache_ttl_seconds)
 
         # Memory monitoring
         self._memory_warning_logged = False
@@ -51,9 +56,10 @@ class AnalysisEngine:
             memory_usage_mb = memory_info.used / (1024 * 1024)
             memory_percent = memory_info.percent / 100
 
+            settings = load_settings()
             if (
                 memory_usage_mb
-                > ProcessingLimits.MAX_MEMORY_MB * ProcessingLimits.MEMORY_WARNING_THRESHOLD
+                > settings.processing_limits.max_memory_mb * settings.processing_limits.memory_warning_threshold
                 and not self._memory_warning_logged
             ):
                 logger.warning(
@@ -304,7 +310,8 @@ class AnalysisEngine:
         self._check_memory_usage()
 
         # Limit batch size to prevent memory issues
-        max_batch = min(len(pr_list), ProcessingLimits.MAX_FILES_PER_BATCH)
+        settings = load_settings()
+        max_batch = min(len(pr_list), settings.processing_limits.max_files_per_batch)
         if len(pr_list) > max_batch:
             logger.warning(
                 f"Limiting batch size from {len(pr_list)} to {max_batch} to prevent memory issues"
@@ -322,7 +329,8 @@ class AnalysisEngine:
             # Process futures in original order to maintain result order
             for future, pr in futures:
                 try:
-                    result = future.result(timeout=ProcessingLimits.THREAD_TIMEOUT_SECONDS)
+                    settings = load_settings()
+                    result = future.result(timeout=settings.processing_limits.thread_timeout_seconds)
                     results.append(result)
                 except TimeoutError:
                     logger.error(f"Timeout processing PR {pr.get('id', 'unknown')}")

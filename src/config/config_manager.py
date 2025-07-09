@@ -4,12 +4,20 @@ import json
 from datetime import UTC, datetime
 from typing import Any
 
+from pydantic import ValidationError as PydanticValidationError
+
 from ..exceptions import (
     ConfigurationError,
     DataValidationError,
     JSONProcessingError,
 )
-from ..validation.input_validator import InputValidator, ValidationError
+from pathlib import Path
+from .schemas import (
+    AIDevsConfig,
+    AnalysisState,
+    validate_ai_developers_config,
+    validate_analysis_state,
+)
 
 
 class ConfigManager:
@@ -19,9 +27,8 @@ class ConfigManager:
         """Initialize the ConfigManager with a configuration directory."""
         # Validate config directory path
         try:
-            validated_path = InputValidator.validate_file_path(config_dir)
-            self.config_dir = validated_path
-        except ValidationError as e:
+            self.config_dir = Path(config_dir)
+        except Exception as e:
             raise ConfigurationError(f"Invalid config directory: {e}", config_key="config_dir")
 
         self.ai_developers_file = self.config_dir / "ai_developers.json"
@@ -38,12 +45,20 @@ class ConfigManager:
         try:
             with open(self.ai_developers_file) as f:
                 data = json.load(f)
-                self._validate_ai_developers_config(data)
-                return data
+                # Validate with Pydantic schema
+                validated_config = validate_ai_developers_config(data)
+                # Convert back to dict for backward compatibility
+                return validated_config.dict()
         except json.JSONDecodeError as e:
             raise JSONProcessingError(
                 f"Invalid JSON in {self.ai_developers_file}: {e}",
                 file_path=str(self.ai_developers_file),
+            )
+        except PydanticValidationError as e:
+            raise DataValidationError(
+                f"Invalid AI developers config: {e}",
+                field_name="ai_developers_config",
+                validation_rule="schema_validation",
             )
         except (OSError, IOError) as e:
             raise ConfigurationError(
@@ -56,78 +71,42 @@ class ConfigManager:
 
     def save_ai_developers(self, config: dict[str, list[dict[str, Any]]]) -> None:
         """Save AI developers configuration to file."""
-        self._validate_ai_developers_config(config)
+        # Validate with Pydantic schema
+        try:
+            validated_config = validate_ai_developers_config(config)
+        except PydanticValidationError as e:
+            raise DataValidationError(
+                f"Invalid AI developers config: {e}",
+                field_name="ai_developers_config",
+                validation_rule="schema_validation",
+            )
 
         with open(self.ai_developers_file, "w") as f:
-            json.dump(config, f, indent=2)
-
-    def _validate_ai_developers_config(self, config: dict[str, Any]) -> None:
-        """Validate AI developers configuration structure."""
-        if not isinstance(config, dict):
-            raise DataValidationError(
-                "Configuration must be a dictionary",
-                field_name="config",
-                validation_rule="type_check",
-            )
-
-        if "always_ai_developers" not in config:
-            raise DataValidationError(
-                "Configuration must contain 'always_ai_developers' key",
-                field_name="always_ai_developers",
-                validation_rule="required_field",
-            )
-
-        if not isinstance(config["always_ai_developers"], list):
-            raise DataValidationError(
-                "'always_ai_developers' must be a list",
-                field_name="always_ai_developers",
-                validation_rule="type_check",
-            )
-
-        for idx, dev in enumerate(config["always_ai_developers"]):
-            if not isinstance(dev, dict):
-                raise DataValidationError(
-                    f"Developer at index {idx} must be a dictionary",
-                    field_name=f"developers[{idx}]",
-                    validation_rule="type_check",
-                )
-
-            required_fields = ["username", "email", "ai_tool", "percentage"]
-            for field in required_fields:
-                if field not in dev:
-                    raise DataValidationError(
-                        f"Developer at index {idx} missing required field: {field}",
-                        field_name=f"developers[{idx}].{field}",
-                        validation_rule="required_field",
-                    )
-
-            if not isinstance(dev["percentage"], (int, float)) or not 0 <= dev["percentage"] <= 100:
-                raise DataValidationError(
-                    f"Developer at index {idx} has invalid percentage: {dev['percentage']}",
-                    field_name=f"developers[{idx}].percentage",
-                    field_value=dev["percentage"],
-                    validation_rule="range_check",
-                )
+            json.dump(validated_config.dict(), f, indent=2)
 
     def load_analysis_state(self) -> dict[str, Any]:
         """Load analysis state from file."""
         if not self.state_file.exists():
             # Return default state
-            return {
-                "last_run_date": None,
-                "processed_pr_ids": [],
-                "processed_commit_shas": [],
-                "total_records_processed": 0,
-            }
+            default_state = AnalysisState()
+            return default_state.dict()
 
         try:
             with open(self.state_file) as f:
                 data = json.load(f)
-                self._validate_analysis_state(data)
-                return data
+                # Validate with Pydantic schema
+                validated_state = validate_analysis_state(data)
+                # Convert back to dict for backward compatibility
+                return validated_state.dict()
         except json.JSONDecodeError as e:
             raise JSONProcessingError(
                 f"Invalid JSON in {self.state_file}: {e}", file_path=str(self.state_file)
+            )
+        except PydanticValidationError as e:
+            raise DataValidationError(
+                f"Invalid analysis state: {e}",
+                field_name="analysis_state",
+                validation_rule="schema_validation",
             )
         except (OSError, IOError) as e:
             raise ConfigurationError(
@@ -140,63 +119,19 @@ class ConfigManager:
 
     def save_analysis_state(self, state: dict[str, Any]) -> None:
         """Save analysis state to file."""
-        self._validate_analysis_state(state)
+        # Validate with Pydantic schema
+        try:
+            validated_state = validate_analysis_state(state)
+        except PydanticValidationError as e:
+            raise DataValidationError(
+                f"Invalid analysis state: {e}",
+                field_name="analysis_state",
+                validation_rule="schema_validation",
+            )
 
         with open(self.state_file, "w") as f:
-            json.dump(state, f, indent=2)
+            json.dump(validated_state.dict(), f, indent=2)
 
-    def _validate_analysis_state(self, state: dict[str, Any]) -> None:
-        """Validate analysis state structure."""
-        if not isinstance(state, dict):
-            raise DataValidationError(
-                "State must be a dictionary", field_name="state", validation_rule="type_check"
-            )
-
-        required_fields = [
-            "last_run_date",
-            "processed_pr_ids",
-            "processed_commit_shas",
-            "total_records_processed",
-        ]
-        for field in required_fields:
-            if field not in state:
-                raise DataValidationError(
-                    f"State missing required field: {field}",
-                    field_name=field,
-                    validation_rule="required_field",
-                )
-
-        if state["last_run_date"] is not None and not isinstance(state["last_run_date"], str):
-            raise DataValidationError(
-                "last_run_date must be a string or null",
-                field_name="last_run_date",
-                validation_rule="type_check",
-            )
-
-        if not isinstance(state["processed_pr_ids"], list):
-            raise DataValidationError(
-                "processed_pr_ids must be a list",
-                field_name="processed_pr_ids",
-                validation_rule="type_check",
-            )
-
-        if not isinstance(state["processed_commit_shas"], list):
-            raise DataValidationError(
-                "processed_commit_shas must be a list",
-                field_name="processed_commit_shas",
-                validation_rule="type_check",
-            )
-
-        if (
-            not isinstance(state["total_records_processed"], int)
-            or state["total_records_processed"] < 0
-        ):
-            raise DataValidationError(
-                "total_records_processed must be a non-negative integer",
-                field_name="total_records_processed",
-                field_value=state["total_records_processed"],
-                validation_rule="range_check",
-            )
 
     def update_state_after_run(
         self, new_pr_ids: list[str], new_commit_shas: list[str], records_processed: int

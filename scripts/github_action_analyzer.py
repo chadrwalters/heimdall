@@ -443,9 +443,24 @@ Respond ONLY with the JSON object."""
                 "analysis_summary": "Unable to parse analysis response",
             }
 
-    def calculate_impact_score(self, complexity: int, risk: int, clarity: int) -> float:
-        """Calculate impact score using PRD formula."""
-        return (0.4 * complexity) + (0.5 * risk) + (0.1 * clarity)
+    def calculate_impact_score(
+        self, complexity: int, risk: int, clarity: int, 
+        lines_changed: int = 0, files_changed: int = 0
+    ) -> float:
+        """Calculate weighted impact score with size-based multipliers."""
+        # Base PRD formula: 40% complexity + 50% risk + 10% clarity
+        base_score = (0.4 * complexity) + (0.5 * risk) + (0.1 * clarity)
+        
+        # Size multiplier for large changes
+        size_multiplier = 1.0
+        if lines_changed > 1000 or files_changed > 10:
+            # Scale multiplier based on change size
+            line_factor = min(lines_changed / 5000, 1.0)  # Cap at 5k lines
+            file_factor = min(files_changed / 50, 1.0)     # Cap at 50 files
+            size_multiplier = 1.0 + (0.5 * max(line_factor, file_factor))
+        
+        final_score = base_score * size_multiplier
+        return min(final_score, 10.0)  # Cap at maximum score
 
     def analyze_pr(self, pr_data: dict[str, Any], diff: str) -> dict[str, Any]:
         """Full PR analysis combining all components."""

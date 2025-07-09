@@ -1,0 +1,10 @@
+{
+  "always_ai_developers": [
+    {
+      "username": "chad",
+      "email": "chad@company.com",
+      "ai_tool": "Claude/Cursor",
+      "percentage": 100
+    }
+  ]
+}

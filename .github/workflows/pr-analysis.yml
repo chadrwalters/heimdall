@@ -1,0 +1,282 @@
+name: PR Analysis Bot
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to analyze (optional)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  analyze-pr:
+    runs-on: ubuntu-latest
+    name: Analyze Pull Request
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for diff generation
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      
+      - name: Install dependencies
+        run: |
+          uv sync
+          
+      - name: Gather PR Information
+        id: pr_info
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+        run: |
+          # Get PR data using GitHub API
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No PR number provided"
+            exit 1
+          fi
+          
+          PR_DATA=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER")
+          
+          # Extract key information
+          PR_TITLE=$(echo "$PR_DATA" | jq -r '.title // empty')
+          PR_BODY=$(echo "$PR_DATA" | jq -r '.body // empty')
+          PR_AUTHOR=$(echo "$PR_DATA" | jq -r '.user.login // empty')
+          PR_BASE=$(echo "$PR_DATA" | jq -r '.base.ref // empty')
+          PR_HEAD=$(echo "$PR_DATA" | jq -r '.head.ref // empty')
+          PR_URL=$(echo "$PR_DATA" | jq -r '.html_url // empty')
+          FILES_CHANGED=$(echo "$PR_DATA" | jq -r '.changed_files // 0')
+          ADDITIONS=$(echo "$PR_DATA" | jq -r '.additions // 0')
+          DELETIONS=$(echo "$PR_DATA" | jq -r '.deletions // 0')
+          
+          # Save to environment using proper escaping
+          {
+            echo "PR_TITLE=$PR_TITLE"
+            echo "PR_BODY<<EOF"
+            echo "$PR_BODY"
+            echo "EOF"
+            echo "PR_AUTHOR=$PR_AUTHOR"
+            echo "PR_BASE=$PR_BASE"
+            echo "PR_HEAD=$PR_HEAD"
+            echo "PR_URL=$PR_URL"
+            echo "FILES_CHANGED=$FILES_CHANGED"
+            echo "ADDITIONS=$ADDITIONS"
+            echo "DELETIONS=$DELETIONS"
+            echo "PR_NUMBER=$PR_NUMBER"
+          } >> $GITHUB_ENV
+          
+          # Save PR data for analysis script
+          echo "$PR_DATA" > pr_data.json
+      
+      - name: Generate PR Diff
+        id: pr_diff
+        run: |
+          # Generate diff between base and head
+          git fetch origin ${{ env.PR_BASE }}:refs/remotes/origin/${{ env.PR_BASE }}
+          git fetch origin ${{ env.PR_HEAD }}:refs/remotes/origin/${{ env.PR_HEAD }}
+          
+          # Get the diff (limit to reasonable size for API)
+          DIFF=$(git diff origin/${{ env.PR_BASE }}...origin/${{ env.PR_HEAD }} | head -c 15000)
+          
+          # Save diff to file
+          echo "$DIFF" > pr_diff.txt
+          
+          # Get list of changed files
+          CHANGED_FILES=$(git diff --name-only origin/${{ env.PR_BASE }}...origin/${{ env.PR_HEAD }} | head -20)
+          echo "$CHANGED_FILES" > changed_files.txt
+      
+      - name: Run Analysis
+        id: analysis
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          # Run the standalone analyzer
+          uv run python scripts/github_action_analyzer.py
+      
+      - name: Format Comment
+        id: format_comment
+        run: |
+          # Read analysis result
+          ANALYSIS=$(cat analysis_result.json)
+          
+          # Extract values
+          WORK_TYPE=$(echo "$ANALYSIS" | jq -r '.work_type // "Unknown"')
+          COMPLEXITY=$(echo "$ANALYSIS" | jq -r '.complexity_score // 5')
+          RISK=$(echo "$ANALYSIS" | jq -r '.risk_score // 5')
+          CLARITY=$(echo "$ANALYSIS" | jq -r '.clarity_score // 5')
+          IMPACT=$(echo "$ANALYSIS" | jq -r '.impact_score // 5.0')
+          SUMMARY=$(echo "$ANALYSIS" | jq -r '.analysis_summary // "No summary available"')
+          AI_ASSISTED=$(echo "$ANALYSIS" | jq -r '.ai_assisted // false')
+          AI_TOOL=$(echo "$ANALYSIS" | jq -r '.ai_tool_type // "None"')
+          LINEAR_TICKET=$(echo "$ANALYSIS" | jq -r '.linear_ticket_id // null')
+          
+          # Create visual indicators
+          get_indicator() {
+            local score=$1
+            if [ "$score" -le 3 ]; then echo "🟢"
+            elif [ "$score" -le 7 ]; then echo "🟡"
+            else echo "🔴"
+            fi
+          }
+          
+          COMPLEXITY_IND=$(get_indicator $COMPLEXITY)
+          RISK_IND=$(get_indicator $RISK)
+          CLARITY_IND=$(get_indicator $((11 - $CLARITY)))  # Invert for clarity (high is good)
+          
+          # Format impact score
+          IMPACT_FORMATTED=$(printf "%.1f" $IMPACT)
+          
+          # Create comment body
+          cat > comment.md << EOF
+          ## 🤖 PR Analysis Results
+          
+          **Work Type:** $WORK_TYPE  
+          **Summary:** $SUMMARY
+          
+          ### 📊 Scores
+          
+          | Metric | Score | Indicator | Description |
+          |--------|-------|-----------|-------------|
+          | **Complexity** | $COMPLEXITY/10 | $COMPLEXITY_IND | How complex are the changes? |
+          | **Risk** | $RISK/10 | $RISK_IND | Potential for breaking changes |
+          | **Clarity** | $CLARITY/10 | $(get_indicator $((11 - $CLARITY))) | Code readability and documentation |
+          | **Impact** | $IMPACT_FORMATTED/10 | - | Overall impact score |
+          
+          ### 📋 Additional Information
+          
+          - **Files Changed:** $FILES_CHANGED
+          - **Lines Added:** +$ADDITIONS
+          - **Lines Deleted:** -$DELETIONS
+          - **AI-Assisted:** $([ "$AI_ASSISTED" = "true" ] && echo "Yes ($AI_TOOL)" || echo "No")
+          - **Linear Ticket:** $([ "$LINEAR_TICKET" != "null" ] && echo "[$LINEAR_TICKET](https://linear.app/issue/$LINEAR_TICKET)" || echo "None")
+          
+          ---
+          
+          <details>
+          <summary>About this analysis</summary>
+          
+          This automated analysis uses AI to evaluate code changes based on:
+          - **Complexity**: Lines of code, number of files, algorithmic complexity, and architectural changes
+          - **Risk**: Potential for bugs, breaking changes, security implications, and blast radius  
+          - **Clarity**: Code readability, documentation, naming, and how well the intent is communicated
+          - **Impact**: Weighted score (40% complexity + 50% risk + 10% clarity)
+          
+          </details>
+          EOF
+          
+          # Save comment to output
+          echo "comment_file=comment.md" >> $GITHUB_OUTPUT
+      
+      - name: Post Comment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const commentBody = fs.readFileSync('comment.md', 'utf8');
+            
+            // Check if we already have a comment from this bot
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ env.PR_NUMBER }}
+            });
+            
+            const botComment = comments.data.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('🤖 PR Analysis Results')
+            );
+            
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: commentBody
+              });
+              console.log('Updated existing comment');
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: ${{ env.PR_NUMBER }},
+                body: commentBody
+              });
+              console.log('Created new comment');
+            }
+      
+      - name: Apply Labels
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const analysisResult = require('./analysis_result.json');
+            
+            const labels = [];
+            
+            // Add work type label
+            const workTypeLabel = `type: ${analysisResult.work_type.toLowerCase().replace(' ', '-')}`;
+            labels.push(workTypeLabel);
+            
+            // Add complexity label
+            if (analysisResult.complexity_score <= 3) {
+              labels.push('complexity: low');
+            } else if (analysisResult.complexity_score <= 7) {
+              labels.push('complexity: medium');
+            } else {
+              labels.push('complexity: high');
+            }
+            
+            // Add risk label
+            if (analysisResult.risk_score <= 3) {
+              labels.push('risk: low');
+            } else if (analysisResult.risk_score <= 7) {
+              labels.push('risk: medium');
+            } else {
+              labels.push('risk: high');
+            }
+            
+            // Add AI-assisted label if applicable
+            if (analysisResult.ai_assisted) {
+              labels.push('ai-assisted');
+            }
+            
+            // Add process compliance label
+            if (analysisResult.has_linear_ticket) {
+              labels.push('has-ticket');
+            } else {
+              labels.push('needs-ticket');
+            }
+            
+            try {
+              // Apply labels to PR
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: ${{ env.PR_NUMBER }},
+                labels: labels
+              });
+              console.log(`Applied labels: ${labels.join(', ')}`);
+            } catch (error) {
+              console.error('Error applying labels:', error);
+              // Continue even if labels fail
+            }

@@ -28,20 +28,12 @@ class InputValidator:
         r"__import__\s*\(",  # Direct import calls
     ]
 
-    # Allowed directories for file operations
-    ALLOWED_DIRECTORIES = [
-        "config",
-        "logs",
-        "data",
-        "output",
-        "temp",
-        ".coverage",
-        "scripts",
-        "docs",
-        "tests",
-        "tmp",
-        "var",  # for system temp directories
-    ]
+    @classmethod
+    def _get_allowed_directories(cls) -> list[str]:
+        """Get allowed directories from configuration."""
+        from ..config.constants import security_settings
+
+        return security_settings.ALLOWED_DIRECTORIES
 
     @classmethod
     def validate_prompt_input(cls, user_input: str, max_length: int = 10000) -> str:
@@ -131,13 +123,10 @@ class InputValidator:
             )
 
             if not is_temp_dir:
-                allowed = any(
-                    allowed_dir in file_path_str for allowed_dir in cls.ALLOWED_DIRECTORIES
-                )
+                allowed_dirs = cls._get_allowed_directories()
+                allowed = any(allowed_dir in file_path_str for allowed_dir in allowed_dirs)
                 if not allowed:
-                    raise ValidationError(
-                        f"Path not in allowed directories: {cls.ALLOWED_DIRECTORIES}"
-                    )
+                    raise ValidationError(f"Path not in allowed directories: {allowed_dirs}")
 
         return file_path
 

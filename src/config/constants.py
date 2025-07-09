@@ -1,145 +1,305 @@
-"""Application constants and configuration values."""
+"""Application constants and configuration values.
 
+This module provides access to configuration values that can be overridden
+by environment variables through the Pydantic settings system.
+"""
+
+import threading
 from typing import Final
+
+from .schemas import load_settings
+
+# Thread-safe singleton for settings
+_settings_lock = threading.Lock()
+_settings = None
+
+
+def get_settings():
+    """Get cached settings instance (thread-safe)."""
+    global _settings
+    if _settings is None:
+        with _settings_lock:
+            # Double-checked locking pattern
+            if _settings is None:
+                _settings = load_settings()
+    return _settings
 
 
 class ProcessingLimits:
-    """Processing limits and constraints."""
+    """Processing limits and constraints (environment-configurable)."""
 
-    # Diff processing limits
-    DIFF_LENGTH_LIMIT: Final[int] = 4000
-    DIFF_TRUNCATION_BUFFER: Final[int] = 100
+    @property
+    def DIFF_LENGTH_LIMIT(self) -> int:
+        return get_settings().processing_limits.diff_length_limit
 
-    # Cache settings
-    CACHE_SIZE_DEFAULT: Final[int] = 1000
-    CACHE_SIZE_MAX: Final[int] = 10000
-    CACHE_TTL_SECONDS: Final[int] = 3600  # 1 hour
+    @property
+    def DIFF_TRUNCATION_BUFFER(self) -> int:
+        return get_settings().processing_limits.diff_truncation_buffer
 
-    # Threading and concurrency
-    MAX_WORKERS_DEFAULT: Final[int] = 5
-    MAX_WORKERS_MAX: Final[int] = 20
-    THREAD_TIMEOUT_SECONDS: Final[int] = 300  # 5 minutes
+    @property
+    def CACHE_SIZE_DEFAULT(self) -> int:
+        return get_settings().processing_limits.cache_size_default
 
-    # File processing
-    MAX_FILE_SIZE_MB: Final[int] = 100
-    CSV_CHUNK_SIZE: Final[int] = 10000
-    MAX_FILES_PER_BATCH: Final[int] = 1000
+    @property
+    def CACHE_SIZE_MAX(self) -> int:
+        return get_settings().processing_limits.cache_size_max
 
-    # Memory limits
-    MAX_MEMORY_MB: Final[int] = 2048  # 2GB
-    MEMORY_WARNING_THRESHOLD: Final[float] = 0.8  # 80%
+    @property
+    def CACHE_TTL_SECONDS(self) -> int:
+        return get_settings().processing_limits.cache_ttl_seconds
 
-    # API rate limiting
-    API_RATE_LIMIT_REQUESTS_PER_MINUTE: Final[int] = 60
-    API_TIMEOUT_SECONDS: Final[int] = 30
-    API_RETRY_ATTEMPTS: Final[int] = 3
-    API_RETRY_DELAY_SECONDS: Final[float] = 1.0
+    @property
+    def MAX_WORKERS_DEFAULT(self) -> int:
+        return get_settings().processing_limits.max_workers_default
+
+    @property
+    def MAX_WORKERS_MAX(self) -> int:
+        return get_settings().processing_limits.max_workers_max
+
+    @property
+    def THREAD_TIMEOUT_SECONDS(self) -> int:
+        return get_settings().processing_limits.thread_timeout_seconds
+
+    @property
+    def MAX_FILE_SIZE_MB(self) -> int:
+        return get_settings().processing_limits.max_file_size_mb
+
+    @property
+    def CSV_CHUNK_SIZE(self) -> int:
+        return get_settings().processing_limits.csv_chunk_size
+
+    @property
+    def MAX_FILES_PER_BATCH(self) -> int:
+        return get_settings().processing_limits.max_files_per_batch
+
+    @property
+    def MAX_MEMORY_MB(self) -> int:
+        return get_settings().processing_limits.max_memory_mb
+
+    @property
+    def MEMORY_WARNING_THRESHOLD(self) -> float:
+        return get_settings().processing_limits.memory_warning_threshold
+
+    @property
+    def API_RATE_LIMIT_REQUESTS_PER_MINUTE(self) -> int:
+        return get_settings().processing_limits.api_rate_limit_requests_per_minute
+
+    @property
+    def API_TIMEOUT_SECONDS(self) -> int:
+        return get_settings().processing_limits.api_timeout_seconds
+
+    @property
+    def API_RETRY_ATTEMPTS(self) -> int:
+        return get_settings().processing_limits.api_retry_attempts
+
+    @property
+    def API_RETRY_DELAY_SECONDS(self) -> float:
+        return get_settings().processing_limits.api_retry_delay_seconds
 
 
 class ValidationLimits:
-    """Input validation limits."""
+    """Input validation limits (environment-configurable)."""
 
-    # String length limits
-    PROMPT_INPUT_MAX_LENGTH: Final[int] = 10000
-    TITLE_MAX_LENGTH: Final[int] = 500
-    DESCRIPTION_MAX_LENGTH: Final[int] = 2000
-    FILENAME_MAX_LENGTH: Final[int] = 200
-    EMAIL_MAX_LENGTH: Final[int] = 254
+    @property
+    def PROMPT_INPUT_MAX_LENGTH(self) -> int:
+        return get_settings().validation_limits.prompt_input_max_length
 
-    # Numeric ranges
-    SCORE_MIN: Final[int] = 1
-    SCORE_MAX: Final[int] = 10
-    PERCENTAGE_MIN: Final[float] = 0.0
-    PERCENTAGE_MAX: Final[float] = 100.0
+    @property
+    def TITLE_MAX_LENGTH(self) -> int:
+        return get_settings().validation_limits.title_max_length
 
-    # GraphQL limits
-    GRAPHQL_QUERY_MAX_LENGTH: Final[int] = 10000
-    GRAPHQL_MAX_COMPLEXITY: Final[int] = 100
-    GRAPHQL_MAX_DEPTH: Final[int] = 10
-    GRAPHQL_VARIABLE_MAX_LENGTH: Final[int] = 1000
+    @property
+    def DESCRIPTION_MAX_LENGTH(self) -> int:
+        return get_settings().validation_limits.description_max_length
+
+    @property
+    def FILENAME_MAX_LENGTH(self) -> int:
+        return get_settings().validation_limits.filename_max_length
+
+    @property
+    def EMAIL_MAX_LENGTH(self) -> int:
+        return get_settings().validation_limits.email_max_length
+
+    @property
+    def SCORE_MIN(self) -> int:
+        return get_settings().validation_limits.score_min
+
+    @property
+    def SCORE_MAX(self) -> int:
+        return get_settings().validation_limits.score_max
+
+    @property
+    def PERCENTAGE_MIN(self) -> float:
+        return get_settings().validation_limits.percentage_min
+
+    @property
+    def PERCENTAGE_MAX(self) -> float:
+        return get_settings().validation_limits.percentage_max
+
+    @property
+    def GRAPHQL_QUERY_MAX_LENGTH(self) -> int:
+        return get_settings().validation_limits.graphql_query_max_length
+
+    @property
+    def GRAPHQL_MAX_COMPLEXITY(self) -> int:
+        return get_settings().validation_limits.graphql_max_complexity
+
+    @property
+    def GRAPHQL_MAX_DEPTH(self) -> int:
+        return get_settings().validation_limits.graphql_max_depth
+
+    @property
+    def GRAPHQL_VARIABLE_MAX_LENGTH(self) -> int:
+        return get_settings().validation_limits.graphql_variable_max_length
 
 
 class Pricing:
-    """API pricing information (update regularly)."""
+    """API pricing information (environment-configurable)."""
 
-    # Claude Sonnet 4 pricing per 1K tokens (as of 2025)
-    CLAUDE_INPUT_PRICE_PER_1K: Final[float] = 0.003
-    CLAUDE_OUTPUT_PRICE_PER_1K: Final[float] = 0.015
+    @property
+    def CLAUDE_INPUT_PRICE_PER_1K(self) -> float:
+        return get_settings().pricing.claude_input_price_per_1k
 
-    # Cost thresholds for monitoring
-    DAILY_COST_WARNING_THRESHOLD: Final[float] = 100.0  # $100/day
-    MONTHLY_COST_LIMIT: Final[float] = 1000.0  # $1000/month
+    @property
+    def CLAUDE_OUTPUT_PRICE_PER_1K(self) -> float:
+        return get_settings().pricing.claude_output_price_per_1k
+
+    @property
+    def DAILY_COST_WARNING_THRESHOLD(self) -> float:
+        return get_settings().pricing.daily_cost_warning_threshold
+
+    @property
+    def MONTHLY_COST_LIMIT(self) -> float:
+        return get_settings().pricing.monthly_cost_limit
 
 
 class SecuritySettings:
-    """Security configuration."""
+    """Security configuration (environment-configurable)."""
 
-    # Key management
-    API_KEY_MIN_LENGTH: Final[int] = 10
-    API_KEY_MAX_LENGTH: Final[int] = 500
-    KEY_ROTATION_DAYS: Final[int] = 90
+    @property
+    def API_KEY_MIN_LENGTH(self) -> int:
+        return get_settings().security.api_key_min_length
 
-    # Encryption
-    ENCRYPTION_KEY_LENGTH: Final[int] = 32
-    PBKDF2_ITERATIONS: Final[int] = 100000
+    @property
+    def API_KEY_MAX_LENGTH(self) -> int:
+        return get_settings().security.api_key_max_length
 
-    # Session management
-    SESSION_TIMEOUT_MINUTES: Final[int] = 60
-    MAX_FAILED_ATTEMPTS: Final[int] = 5
+    @property
+    def KEY_ROTATION_DAYS(self) -> int:
+        return get_settings().security.key_rotation_days
+
+    @property
+    def ENCRYPTION_KEY_LENGTH(self) -> int:
+        return get_settings().security.encryption_key_length
+
+    @property
+    def PBKDF2_ITERATIONS(self) -> int:
+        return get_settings().security.pbkdf2_iterations
+
+    @property
+    def SESSION_TIMEOUT_MINUTES(self) -> int:
+        return get_settings().security.session_timeout_minutes
+
+    @property
+    def MAX_FAILED_ATTEMPTS(self) -> int:
+        return get_settings().security.max_failed_attempts
+
+    @property
+    def ENCRYPTION_SALT(self) -> str:
+        return get_settings().security.encryption_salt
+
+    @property
+    def ALLOWED_DIRECTORIES(self) -> list[str]:
+        return get_settings().security.allowed_directories
 
 
 class LoggingConfig:
-    """Logging configuration."""
+    """Logging configuration (environment-configurable)."""
 
-    # Log levels
-    DEFAULT_LOG_LEVEL: Final[str] = "INFO"
-    DEBUG_LOG_LEVEL: Final[str] = "DEBUG"
+    @property
+    def DEFAULT_LOG_LEVEL(self) -> str:
+        level = get_settings().logging.default_log_level
+        return level.value if hasattr(level, "value") else str(level)
 
-    # Log file settings
-    MAX_LOG_FILE_SIZE_MB: Final[int] = 100
-    MAX_LOG_FILES: Final[int] = 5
+    @property
+    def DEBUG_LOG_LEVEL(self) -> str:
+        level = get_settings().logging.debug_log_level
+        return level.value if hasattr(level, "value") else str(level)
 
-    # Sensitive data patterns to mask
-    SENSITIVE_PATTERNS: Final[list[str]] = [
-        r"sk-ant-[\w-]+",  # Anthropic keys
-        r"ghp_[\w]+",  # GitHub tokens
-        r"lin_api_[\w]+",  # Linear API keys
-        r"Bearer\s+[\w.-]+",  # Bearer tokens
-    ]
+    @property
+    def MAX_LOG_FILE_SIZE_MB(self) -> int:
+        return get_settings().logging.max_log_file_size_mb
+
+    @property
+    def MAX_LOG_FILES(self) -> int:
+        return get_settings().logging.max_log_files
+
+    @property
+    def SENSITIVE_PATTERNS(self) -> list[str]:
+        return get_settings().logging.sensitive_patterns
 
 
 class FileExtensions:
-    """Supported file extensions."""
+    """Supported file extensions (static constants)."""
 
-    # Data files
     CSV_EXTENSION: Final[str] = ".csv"
     JSON_EXTENSION: Final[str] = ".json"
-
-    # Log files
     LOG_EXTENSION: Final[str] = ".log"
-
-    # Config files
     CONFIG_EXTENSIONS: Final[list[str]] = [".json", ".yaml", ".yml", ".toml"]
 
 
 class MetricsConfig:
-    """Metrics and analysis configuration."""
+    """Metrics and analysis configuration (environment-configurable)."""
 
-    # Impact score weights (must sum to 1.0)
-    COMPLEXITY_WEIGHT: Final[float] = 0.4
-    RISK_WEIGHT: Final[float] = 0.5
-    CLARITY_WEIGHT: Final[float] = 0.1
+    @property
+    def COMPLEXITY_WEIGHT(self) -> float:
+        return get_settings().metrics.complexity_weight
 
-    # Time periods
-    PILOT_DAYS: Final[int] = 7
-    DEFAULT_ANALYSIS_DAYS: Final[int] = 30
-    MAX_ANALYSIS_DAYS: Final[int] = 365
+    @property
+    def RISK_WEIGHT(self) -> float:
+        return get_settings().metrics.risk_weight
 
-    # Thresholds
-    HIGH_IMPACT_THRESHOLD: Final[float] = 7.0
-    HIGH_COMPLEXITY_THRESHOLD: Final[int] = 8
-    HIGH_RISK_THRESHOLD: Final[int] = 8
+    @property
+    def CLARITY_WEIGHT(self) -> float:
+        return get_settings().metrics.clarity_weight
 
-    # Developer metrics
-    DEVELOPER_METRICS_WINDOW_WEEKS: Final[int] = 4
-    MIN_COMMITS_FOR_ANALYSIS: Final[int] = 5
+    @property
+    def PILOT_DAYS(self) -> int:
+        return get_settings().metrics.pilot_days
+
+    @property
+    def DEFAULT_ANALYSIS_DAYS(self) -> int:
+        return get_settings().metrics.default_analysis_days
+
+    @property
+    def MAX_ANALYSIS_DAYS(self) -> int:
+        return get_settings().metrics.max_analysis_days
+
+    @property
+    def HIGH_IMPACT_THRESHOLD(self) -> float:
+        return get_settings().metrics.high_impact_threshold
+
+    @property
+    def HIGH_COMPLEXITY_THRESHOLD(self) -> int:
+        return get_settings().metrics.high_complexity_threshold
+
+    @property
+    def HIGH_RISK_THRESHOLD(self) -> int:
+        return get_settings().metrics.high_risk_threshold
+
+    @property
+    def DEVELOPER_METRICS_WINDOW_WEEKS(self) -> int:
+        return get_settings().metrics.developer_metrics_window_weeks
+
+    @property
+    def MIN_COMMITS_FOR_ANALYSIS(self) -> int:
+        return get_settings().metrics.min_commits_for_analysis
+
+
+# Create singleton instances for backward compatibility
+processing_limits = ProcessingLimits()
+validation_limits = ValidationLimits()
+pricing = Pricing()
+security_settings = SecuritySettings()
+logging_config = LoggingConfig()
+metrics_config = MetricsConfig()

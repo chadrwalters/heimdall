@@ -1,0 +1,78 @@
+# Production Environment Configuration
+# Optimized for high performance and reliability
+
+# Processing limits for production
+processing_limits:
+  diff_length_limit: 100000  # Larger diffs supported
+  cache_size_default: 1000
+  max_workers_default: 16  # Higher concurrency
+  api_timeout_seconds: 60  # More generous timeout
+  api_rate_limit_requests_per_minute: 120  # Higher rate limits
+  max_memory_mb: 8192  # 8GB limit for production
+  memory_warning_threshold: 0.8  # Alert at 80% memory
+
+# Validation limits (production-ready)
+validation_limits:
+  title_max_length: 500
+  description_max_length: 20000
+  graphql_max_complexity: 500  # Higher complexity allowed
+
+# Pricing (production rates)
+pricing:
+  claude_input_price_per_1k: 0.003
+  claude_output_price_per_1k: 0.015
+  daily_cost_warning_threshold: 100.0  # $100 daily warning
+  monthly_cost_limit: 2000.0  # $2000 monthly limit
+
+# Security (strict for production)
+security:
+  session_timeout_minutes: 30  # Shorter sessions for security
+  max_failed_attempts: 3  # Strict failed attempt limit
+  key_rotation_days: 30  # Frequent key rotation
+  encryption_key_length: 32
+  pbkdf2_iterations: 100000
+
+# Logging (optimized for production)
+logging:
+  default_log_level: "INFO"
+  debug_log_level: "WARNING"
+  max_log_file_size_mb: 500
+  max_log_files: 20
+  enable_structured_logging: true
+  log_sql_queries: false  # Don't log SQL in production
+  log_api_calls: false  # Don't log API details in production
+
+# Metrics (production analysis windows)
+metrics:
+  pilot_days: 7  # Standard pilot period
+  default_analysis_days: 30  # Monthly analysis
+  max_analysis_days: 180  # Support 6-month analysis
+  high_impact_threshold: 7.5
+  min_commits_for_analysis: 10  # Higher threshold for meaningful analysis
+  developer_metrics_window_weeks: 4  # Monthly developer metrics
+
+# Production-specific features
+production:
+  enable_debug_mode: false
+  enable_monitoring: true
+  enable_alerting: true
+  enable_circuit_breakers: true
+  enable_rate_limiting: true
+  enable_caching: true
+  health_check_interval_seconds: 30
+  metrics_collection_interval_seconds: 60
+
+# Monitoring and alerting
+monitoring:
+  enabled: true
+  check_interval_minutes: 2
+  max_alerts_per_hour: 20
+  
+# Email alerts (production)
+email_alerts:
+  enabled: true
+  smtp_port: 587
+  
+# Slack alerts (production)
+slack_alerts:
+  enabled: true

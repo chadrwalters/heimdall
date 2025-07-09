@@ -40,8 +40,11 @@ Respond ONLY with a valid JSON object in the exact format specified. Do not incl
 
     @staticmethod
     def create_analysis_prompt(
-        title: str, description: str | None, diff: str, file_changes: list[str] | None = None,
-        lines_changed: int = 0
+        title: str,
+        description: str | None,
+        diff: str,
+        file_changes: list[str] | None = None,
+        lines_changed: int = 0,
     ) -> str:
         """Create a prompt for analyzing a code change."""
         # Validate and sanitize inputs
@@ -76,9 +79,9 @@ Respond ONLY with a valid JSON object in the exact format specified. Do not incl
         # Dynamic diff truncation based on change size
         num_files = len(file_changes) if file_changes else 1
         max_diff_length = min(4000 + (num_files * 200), 8000)
-        
+
         if len(diff) > max_diff_length:
-            diff = diff[:max_diff_length-100] + "\n... [diff truncated for length]"
+            diff = diff[: max_diff_length - 100] + "\n... [diff truncated for length]"
 
         prompt = f"""Analyze the following code change:
 
@@ -240,20 +243,19 @@ Remember: Respond ONLY with the JSON object, no additional text."""
 
     @staticmethod
     def calculate_impact_score(
-        complexity: int, risk: int, clarity: int, 
-        lines_changed: int = 0, files_changed: int = 0
+        complexity: int, risk: int, clarity: int, lines_changed: int = 0, files_changed: int = 0
     ) -> float:
         """Calculate weighted impact score with size-based multipliers."""
         # Base PRD formula: 40% complexity + 50% risk + 10% clarity
         base_score = (0.4 * complexity) + (0.5 * risk) + (0.1 * clarity)
-        
+
         # Size multiplier for large changes
         size_multiplier = 1.0
         if lines_changed > 1000 or files_changed > 10:
             # Scale multiplier based on change size
             line_factor = min(lines_changed / 5000, 1.0)  # Cap at 5k lines
-            file_factor = min(files_changed / 50, 1.0)     # Cap at 50 files
+            file_factor = min(files_changed / 50, 1.0)  # Cap at 50 files
             size_multiplier = 1.0 + (0.5 * max(line_factor, file_factor))
-        
+
         final_score = base_score * size_multiplier
         return min(final_score, 10.0)  # Cap at maximum score

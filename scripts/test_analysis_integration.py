@@ -84,8 +84,11 @@ index 0000000..1234567
 
     # Calculate impact score
     impact = engineer.calculate_impact_score(
-        result.complexity_score, result.risk_score, result.clarity_score,
-        lines_changed=150, files_changed=5  # Sample values for testing
+        result.complexity_score,
+        result.risk_score,
+        result.clarity_score,
+        lines_changed=150,
+        files_changed=5,  # Sample values for testing
     )
     print(f"Impact score: {impact:.2f}")
 

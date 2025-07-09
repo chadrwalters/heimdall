@@ -6,7 +6,7 @@ from typing import Any, Iterator
 
 import pandas as pd
 
-from ..config.schemas import load_settings
+from ..config.constants import get_settings
 from ..exceptions import (
     CSVProcessingError,
     FileProcessingError,
@@ -25,7 +25,7 @@ class StreamingCSVProcessor:
         Args:
             chunk_size: Size of chunks to process (rows)
         """
-        settings = load_settings()
+        settings = get_settings()
         self.chunk_size = chunk_size or settings.processing_limits.csv_chunk_size
 
     def read_csv_chunks(self, file_path: str) -> Iterator[pd.DataFrame]:
@@ -48,7 +48,7 @@ class StreamingCSVProcessor:
             raise FileNotFoundError(f"CSV file not found: {file_path}")
 
         # Check file size
-        settings = load_settings()
+        settings = get_settings()
         file_size_mb = file_path_obj.stat().st_size / (1024 * 1024)
         if file_size_mb > settings.processing_limits.max_file_size_mb:
             logger.warning(

@@ -1,24 +1,31 @@
 """Main AI Analysis Engine combining all components."""
 
-import logging
 import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, TimeoutError, as_completed
 from typing import Any
 
-import psutil
 from cachetools import TTLCache
 
-from ..config.schemas import load_settings
+from ..config.constants import get_settings
 from ..exceptions import (
     AnalysisError,
     APIError,
 )
+from ..logging import (
+    LogContext,
+    get_structured_logger,
+    log_business_event,
+    log_error,
+    log_performance,
+    set_correlation_id,
+)
+from ..memory import get_memory_manager, memory_efficient_operation
 from .claude_client import ClaudeClient
 from .context_preparer import ContextPreparer, PreparedContext
 from .prompt_engineer import PromptEngineer
 
-logger = logging.getLogger(__name__)
+logger = get_structured_logger(__name__, LogContext(component="analysis_engine"))
 
 
 class AnalysisEngine:
@@ -26,82 +33,110 @@ class AnalysisEngine:
 
     def __init__(self, api_key: str | None = None, max_workers: int = None, cache_size: int = None):
         """Initialize the analysis engine."""
-        self.claude_client = ClaudeClient(api_key=api_key)
-        self.prompt_engineer = PromptEngineer()
-        self.context_preparer = ContextPreparer()
-        
-        # Load settings
-        settings = load_settings()
-        
-        # Set safe defaults with limits
-        self.max_workers = min(
-            max_workers or settings.processing_limits.max_workers_default, 
-            settings.processing_limits.max_workers_max
-        )
+        correlation_id = set_correlation_id()
 
-        # Use TTL cache with size limit
-        cache_size = min(
-            cache_size or settings.processing_limits.cache_size_default, 
-            settings.processing_limits.cache_size_max
-        )
-        self.results_cache = TTLCache(maxsize=cache_size, ttl=settings.processing_limits.cache_ttl_seconds)
+        with log_performance(logger, "analysis_engine_init") as perf:
+            self.claude_client = ClaudeClient(api_key=api_key)
+            self.prompt_engineer = PromptEngineer()
+            self.context_preparer = ContextPreparer()
+            self.memory_manager = get_memory_manager()
 
-        # Memory monitoring
-        self._memory_warning_logged = False
+            # Load settings
+            settings = get_settings()
+
+            # Set safe defaults with limits
+            self.max_workers = min(
+                max_workers or settings.processing_limits.max_workers_default,
+                settings.processing_limits.max_workers_max,
+            )
+
+            # Use TTL cache with size limit
+            cache_size = min(
+                cache_size or settings.processing_limits.cache_size_default,
+                settings.processing_limits.cache_size_max,
+            )
+            self.results_cache = TTLCache(
+                maxsize=cache_size, ttl=settings.processing_limits.cache_ttl_seconds
+            )
+
+            # Register cache cleanup with memory manager
+            self.memory_manager.register_cleanup_callback(self.clear_cache)
+
+            # Start memory monitoring
+            self.memory_manager.start_monitoring()
+
+            perf.add_context(
+                max_workers=self.max_workers, cache_size=cache_size, correlation_id=correlation_id
+            )
+
+            logger.info(
+                "Analysis engine initialized",
+                extra={
+                    "max_workers": self.max_workers,
+                    "cache_size": cache_size,
+                    "correlation_id": correlation_id,
+                },
+            )
 
     def _check_memory_usage(self) -> None:
-        """Monitor memory usage and warn if approaching limits."""
-        try:
-            memory_info = psutil.virtual_memory()
-            memory_usage_mb = memory_info.used / (1024 * 1024)
-            memory_percent = memory_info.percent / 100
+        """Check memory usage using enhanced memory manager."""
+        stats = self.memory_manager.get_memory_stats()
+        pressure = self.memory_manager.get_memory_pressure_level()
 
-            settings = load_settings()
-            if (
-                memory_usage_mb
-                > settings.processing_limits.max_memory_mb * settings.processing_limits.memory_warning_threshold
-                and not self._memory_warning_logged
-            ):
-                logger.warning(
-                    f"High memory usage: {memory_usage_mb:.1f}MB ({memory_percent:.1%}). "
-                    f"Consider reducing batch size or cache size."
-                )
-                self._memory_warning_logged = True
-
-                # Clear cache if memory is very high
-                if memory_percent > 0.9:
-                    logger.warning("Memory critically high - clearing cache")
-                    self.clear_cache()
-
-        except (OSError, psutil.Error) as e:
-            logger.debug(f"Memory monitoring failed: {e}")
-        except Exception as e:
-            logger.warning(f"Unexpected error in memory monitoring: {e}")
+        if pressure == "warning":
+            logger.warning(
+                f"Memory pressure: {stats.percent_used:.1%} "
+                f"({stats.used_mb:.1f}MB used, {stats.available_mb:.1f}MB available)"
+            )
+        elif pressure == "critical":
+            logger.critical(
+                f"Critical memory pressure: {stats.percent_used:.1%} "
+                f"({stats.used_mb:.1f}MB used, {stats.available_mb:.1f}MB available)"
+            )
 
     def _get_memory_stats(self) -> dict[str, Any]:
         """Get current memory statistics."""
         try:
-            memory_info = psutil.virtual_memory()
+            stats = self.memory_manager.get_memory_stats()
             return {
-                "total_mb": memory_info.total / (1024 * 1024),
-                "used_mb": memory_info.used / (1024 * 1024),
-                "available_mb": memory_info.available / (1024 * 1024),
-                "percent_used": memory_info.percent,
+                "total_mb": stats.total_mb,
+                "used_mb": stats.used_mb,
+                "available_mb": stats.available_mb,
+                "percent_used": stats.percent_used * 100,
+                "process_memory_mb": stats.process_memory_mb,
+                "process_percent": stats.process_percent * 100,
                 "cache_size": len(self.results_cache),
+                "pressure_level": self.memory_manager.get_memory_pressure_level(),
             }
-        except (OSError, psutil.Error) as e:
-            logger.debug(f"Failed to get memory stats: {e}")
-            return {"error": "Unable to get memory stats"}
         except Exception as e:
-            logger.warning(f"Unexpected error getting memory stats: {e}")
+            logger.warning(f"Failed to get memory stats: {e}")
             return {"error": "Unable to get memory stats"}
 
     def analyze_pr(
         self, pr_data: dict[str, Any], diff: str | None = None, use_cache: bool = True
     ) -> dict[str, Any]:
         """Analyze a single PR."""
-        # Prepare context
-        context = self.context_preparer.prepare_pr_context(pr_data, diff)
+        correlation_id = set_correlation_id()
+        pr_id = pr_data.get("id", "unknown")
+
+        with log_performance(logger, "analyze_pr") as perf:
+            # Prepare context
+            context = self.context_preparer.prepare_pr_context(pr_data, diff)
+
+            perf.add_context(
+                pr_id=pr_id,
+                repository=pr_data.get("base", {}).get("repo", {}).get("name", "unknown"),
+                author=pr_data.get("user", {}).get("login", "unknown"),
+                correlation_id=correlation_id,
+            )
+
+            log_business_event(
+                logger,
+                event_type="pr_analysis_started",
+                entity_type="pull_request",
+                entity_id=pr_id,
+                repository=pr_data.get("base", {}).get("repo", {}).get("name", "unknown"),
+            )
 
         # Check cache
         if use_cache and context.cache_key in self.results_cache:
@@ -129,9 +164,12 @@ class AnalysisEngine:
 
             # Calculate impact score
             impact_score = self.prompt_engineer.calculate_impact_score(
-                analysis.complexity_score, analysis.risk_score, analysis.clarity_score,
-                lines_changed=context.metadata.get('additions', 0) + context.metadata.get('deletions', 0),
-                files_changed=context.metadata.get('changed_files', 0)
+                analysis.complexity_score,
+                analysis.risk_score,
+                analysis.clarity_score,
+                lines_changed=context.metadata.get("additions", 0)
+                + context.metadata.get("deletions", 0),
+                files_changed=context.metadata.get("changed_files", 0),
             )
 
             # Detect AI assistance
@@ -172,10 +210,30 @@ class AnalysisEngine:
             if use_cache:
                 self.results_cache[context.cache_key] = result
 
+            log_business_event(
+                logger,
+                event_type="pr_analysis_completed",
+                entity_type="pull_request",
+                entity_id=pr_id,
+                work_type=analysis.work_type,
+                complexity_score=analysis.complexity_score,
+                risk_score=analysis.risk_score,
+                impact_score=impact_score,
+                api_tokens_used=response["usage"]["input_tokens"]
+                + response["usage"]["output_tokens"],
+            )
+
             return result
 
         except (APIError, AnalysisError, Exception) as e:
-            logger.error(f"Error analyzing PR {context.metadata.get('pr_id')}: {str(e)}")
+            log_error(
+                logger,
+                e,
+                "pr_analysis",
+                pr_id=pr_id,
+                repository=pr_data.get("base", {}).get("repo", {}).get("name", "unknown"),
+            )
+
             # Try to extract Linear ticket even on error
             try:
                 linear_ticket = self.context_preparer.extract_linear_ticket_id(pr_data)
@@ -241,9 +299,12 @@ class AnalysisEngine:
 
             # Calculate impact score
             impact_score = self.prompt_engineer.calculate_impact_score(
-                analysis.complexity_score, analysis.risk_score, analysis.clarity_score,
-                lines_changed=context.metadata.get('additions', 0) + context.metadata.get('deletions', 0),
-                files_changed=len(context.file_changes)
+                analysis.complexity_score,
+                analysis.risk_score,
+                analysis.clarity_score,
+                lines_changed=context.metadata.get("additions", 0)
+                + context.metadata.get("deletions", 0),
+                files_changed=len(context.file_changes),
             )
 
             # Detect AI assistance
@@ -274,7 +335,8 @@ class AnalysisEngine:
                 "ai_tool_type": ai_tool,
                 "linear_ticket_id": linear_ticket,
                 "has_linear_ticket": linear_ticket is not None,
-                "process_compliant": False,  # Commits are not process compliant
+                "process_compliant": linear_ticket
+                is not None,  # Commits with Linear tickets are process compliant
                 "api_tokens_used": response["usage"]["input_tokens"]
                 + response["usage"]["output_tokens"],
                 "analysis_time": response["response_time"],
@@ -295,6 +357,7 @@ class AnalysisEngine:
             )
             raise AnalysisError(f"Unexpected commit analysis error: {str(e)}") from e
 
+    @memory_efficient_operation(required_mb=500.0)
     def batch_analyze_prs(
         self,
         pr_list: list[dict[str, Any]],
@@ -310,7 +373,7 @@ class AnalysisEngine:
         self._check_memory_usage()
 
         # Limit batch size to prevent memory issues
-        settings = load_settings()
+        settings = get_settings()
         max_batch = min(len(pr_list), settings.processing_limits.max_files_per_batch)
         if len(pr_list) > max_batch:
             logger.warning(
@@ -329,21 +392,19 @@ class AnalysisEngine:
             # Process futures in original order to maintain result order
             for future, pr in futures:
                 try:
-                    settings = load_settings()
-                    result = future.result(timeout=settings.processing_limits.thread_timeout_seconds)
+                    settings = get_settings()
+                    result = future.result(
+                        timeout=settings.processing_limits.thread_timeout_seconds
+                    )
                     results.append(result)
-                except TimeoutError:
-                    logger.error(f"Timeout processing PR {pr.get('id', 'unknown')}")
+                except TimeoutError as e:
+                    log_error(logger, e, "pr_batch_timeout", pr_id=pr.get("id", "unknown"))
                     results.append(self._create_error_result(pr, "Processing timeout"))
                 except (APIError, AnalysisError) as e:
-                    logger.error(
-                        f"Analysis error processing PR {pr.get('id', 'unknown')}: {str(e)}"
-                    )
+                    log_error(logger, e, "pr_batch_analysis_error", pr_id=pr.get("id", "unknown"))
                     results.append(self._create_error_result(pr, f"Analysis error: {str(e)}"))
                 except Exception as e:
-                    logger.error(
-                        f"Unexpected error processing PR {pr.get('id', 'unknown')}: {str(e)}"
-                    )
+                    log_error(logger, e, "pr_batch_unexpected_error", pr_id=pr.get("id", "unknown"))
                     results.append(self._create_error_result(pr, f"Unexpected error: {str(e)}"))
 
                 completed += 1
@@ -379,6 +440,7 @@ class AnalysisEngine:
             "analysis_time": 0,
         }
 
+    @memory_efficient_operation(required_mb=300.0)
     def batch_analyze_commits(
         self,
         commit_list: list[dict[str, Any]],
@@ -477,6 +539,18 @@ class AnalysisEngine:
 
     def clear_cache(self):
         """Clear all caches."""
+        claude_cache_size = len(self.claude_client.cache)
+        results_cache_size = len(self.results_cache)
+
         self.claude_client.clear_cache()
         self.results_cache.clear()
-        logger.info("All caches cleared")
+
+        logger.info(
+            "All caches cleared",
+            extra={
+                "event": "caches_cleared",
+                "claude_cache_size": claude_cache_size,
+                "results_cache_size": results_cache_size,
+                "component": "analysis_engine",
+            },
+        )

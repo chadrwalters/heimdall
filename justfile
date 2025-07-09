@@ -309,6 +309,46 @@ test-integration:
     @echo "🧪 Running integration tests..."
     @{{VENV_DIR}}/bin/python -m pytest tests/ -v -k "integration" --cov=src --cov-report=term-missing
 
+# Run load tests for performance validation
+test-load *ARGS:
+    @echo "⚡ Running load tests..."
+    @{{VENV_DIR}}/bin/python scripts/run_load_tests.py {{ARGS}}
+
+# Run quick load test with default parameters
+test-load-quick:
+    @echo "⚡ Running quick load test..."
+    @{{VENV_DIR}}/bin/python scripts/run_load_tests.py --test-type analysis --requests 50 --concurrent 5
+
+# Run comprehensive load test suite
+test-load-full:
+    @echo "⚡ Running comprehensive load tests..."
+    @{{VENV_DIR}}/bin/python scripts/run_load_tests.py --test-type all --requests 200 --concurrent 15 --output load_test_report.json
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                               API & SERVICES                                 ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+# Start the FastAPI development server
+api-dev:
+    @echo "🚀 Starting FastAPI development server..."
+    @{{VENV_DIR}}/bin/uvicorn src.api.app:app --host 0.0.0.0 --port 8000 --reload
+
+# Start the FastAPI production server
+api-prod:
+    @echo "🚀 Starting FastAPI production server..."
+    @{{VENV_DIR}}/bin/uvicorn src.api.app:app --host 0.0.0.0 --port 8000 --workers 4
+
+# Generate OpenAPI documentation
+api-docs:
+    @echo "📖 Generating OpenAPI documentation..."
+    @{{VENV_DIR}}/bin/python -c "from src.api.app import app; import json; print(json.dumps(app.openapi(), indent=2))" > api_docs.json
+    @echo "📖 OpenAPI documentation saved to api_docs.json"
+
+# Test API endpoints
+api-test:
+    @echo "🧪 Testing API endpoints..."
+    @{{VENV_DIR}}/bin/python -m pytest tests/ -v -k "api" --cov=src --cov-report=term-missing
+
 # Run tests in watch mode
 test-watch:
     @echo "🧪 Running tests in watch mode..."

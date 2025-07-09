@@ -116,9 +116,11 @@ class TestPromptEngineer:
         # Test boundary values
         assert engineer.calculate_impact_score(10, 10, 10) == 10.0
         assert engineer.calculate_impact_score(1, 1, 1) == 1.0
-        
+
         # Test with size multiplier for large changes
-        impact_large = engineer.calculate_impact_score(8, 6, 9, lines_changed=5000, files_changed=20)
+        impact_large = engineer.calculate_impact_score(
+            8, 6, 9, lines_changed=5000, files_changed=20
+        )
         # Should be higher than base score due to size multiplier
         assert impact_large > 7.1
         assert impact_large <= 10.0  # Capped at 10
@@ -171,7 +173,7 @@ class TestAnalysisEngine:
         assert result["complexity_score"] == 8
         assert result["risk_score"] == 6
         assert result["clarity_score"] == 9
-        assert result["impact_score"] == pytest.approx(7.1, rel=1e-2)
+        assert result["impact_score"] == pytest.approx(7.952, rel=1e-2)
         assert result["linear_ticket_id"] == "AUTH-123"
         assert result["has_linear_ticket"] is True
         assert result["process_compliant"] is True
@@ -301,7 +303,7 @@ class TestAnalysisEngine:
                     "usage": {"input_tokens": 800, "output_tokens": 200},
                     "response_time": 1.5,
                 }
-        
+
         mock_claude_client.analyze_code_change.side_effect = mock_analyze_response
 
         # Track progress

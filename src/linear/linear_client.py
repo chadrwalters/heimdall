@@ -8,6 +8,7 @@ from typing import Any
 
 import requests
 
+from ..api.rate_limiter import APIRateLimiterFactory
 from ..security.key_manager import EnvironmentKeyManager, KeySecurityError, SecureKeyManager
 from ..validation.graphql_validator import GraphQLValidator, ValidationError
 
@@ -20,12 +21,12 @@ class LinearClient:
     BASE_URL = "https://api.linear.app/graphql"
     DEFAULT_TIMEOUT = 30
     MAX_RETRIES = 3
-    RATE_LIMIT_DELAY = 1.0  # seconds between requests
 
     def __init__(self, api_key: str | None = None):
         """Initialize Linear client."""
         self.secure_manager = SecureKeyManager()
         self.env_manager = EnvironmentKeyManager(self.secure_manager)
+        self.rate_limiter = APIRateLimiterFactory.create_linear_limiter()
 
         try:
             if api_key:
@@ -54,16 +55,8 @@ class LinearClient:
         self.query_validator = GraphQLValidator()
 
     def _rate_limit(self):
-        """Implement rate limiting between requests."""
-        current_time = time.time()
-        elapsed = current_time - self._last_request_time
-
-        if elapsed < self.RATE_LIMIT_DELAY:
-            sleep_time = self.RATE_LIMIT_DELAY - elapsed
-            logger.debug(f"Rate limiting: sleeping for {sleep_time:.2f}s")
-            time.sleep(sleep_time)
-
-        self._last_request_time = time.time()
+        """Implement adaptive rate limiting between requests."""
+        self.rate_limiter.wait_if_needed()
 
     def _execute_query(self, query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:
         """Execute a GraphQL query with retry logic and security validation."""
@@ -93,16 +86,20 @@ class LinearClient:
                     data = response.json()
                     if "errors" in data:
                         logger.error(f"GraphQL errors: {data['errors']}")
+                        self.rate_limiter.record_failure(is_rate_limit_error=False)
                         raise Exception(f"GraphQL errors: {data['errors']}")
+                    self.rate_limiter.record_success()
                     return data.get("data", {})
                 elif response.status_code == 429:  # Rate limited
                     retry_after = int(response.headers.get("Retry-After", 60))
                     logger.warning(f"Rate limited. Retrying after {retry_after}s")
+                    self.rate_limiter.record_failure(is_rate_limit_error=True)
                     time.sleep(retry_after)
                 else:
                     logger.error(
                         f"Request failed with status {response.status_code}: {response.text}"
                     )
+                    self.rate_limiter.record_failure(is_rate_limit_error=False)
                     if attempt < self.MAX_RETRIES - 1:
                         time.sleep(2**attempt)  # Exponential backoff
                     else:

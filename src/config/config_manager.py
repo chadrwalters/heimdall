@@ -2,6 +2,7 @@
 
 import json
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from pydantic import ValidationError as PydanticValidationError
@@ -11,9 +12,7 @@ from ..exceptions import (
     DataValidationError,
     JSONProcessingError,
 )
-from pathlib import Path
 from .schemas import (
-    AIDevsConfig,
     AnalysisState,
     validate_ai_developers_config,
     validate_analysis_state,
@@ -48,7 +47,7 @@ class ConfigManager:
                 # Validate with Pydantic schema
                 validated_config = validate_ai_developers_config(data)
                 # Convert back to dict for backward compatibility
-                return validated_config.dict()
+                return validated_config.model_dump()
         except json.JSONDecodeError as e:
             raise JSONProcessingError(
                 f"Invalid JSON in {self.ai_developers_file}: {e}",
@@ -82,14 +81,14 @@ class ConfigManager:
             )
 
         with open(self.ai_developers_file, "w") as f:
-            json.dump(validated_config.dict(), f, indent=2)
+            json.dump(validated_config.model_dump(mode="json"), f, indent=2)
 
     def load_analysis_state(self) -> dict[str, Any]:
         """Load analysis state from file."""
         if not self.state_file.exists():
             # Return default state
             default_state = AnalysisState()
-            return default_state.dict()
+            return default_state.model_dump()
 
         try:
             with open(self.state_file) as f:
@@ -97,7 +96,7 @@ class ConfigManager:
                 # Validate with Pydantic schema
                 validated_state = validate_analysis_state(data)
                 # Convert back to dict for backward compatibility
-                return validated_state.dict()
+                return validated_state.model_dump()
         except json.JSONDecodeError as e:
             raise JSONProcessingError(
                 f"Invalid JSON in {self.state_file}: {e}", file_path=str(self.state_file)
@@ -130,8 +129,7 @@ class ConfigManager:
             )
 
         with open(self.state_file, "w") as f:
-            json.dump(validated_state.dict(), f, indent=2)
-
+            json.dump(validated_state.model_dump(mode="json"), f, indent=2)
 
     def update_state_after_run(
         self, new_pr_ids: list[str], new_commit_shas: list[str], records_processed: int

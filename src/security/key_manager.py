@@ -49,11 +49,13 @@ class SecureKeyManager:
                 logger.warning("Store this key securely and set it in the environment variable!")
 
             # Derive encryption key from master key
+            from ..config.constants import security_settings
+
             kdf = PBKDF2HMAC(
                 algorithm=hashes.SHA256(),
                 length=32,
-                salt=b"north_star_salt",  # In production, use random salt per installation
-                iterations=100000,
+                salt=security_settings.ENCRYPTION_SALT.encode(),
+                iterations=security_settings.PBKDF2_ITERATIONS,
             )
             key = base64.urlsafe_b64encode(kdf.derive(master_key.encode()))
             self._cipher = Fernet(key)

@@ -52,19 +52,19 @@ class GitHubActionAnalyzer:
         """Analyze diff using rule-based logic."""
         # Analyze work type
         work_type = self._detect_work_type(title, description, diff)
-        
+
         # Calculate complexity score
         complexity_score = self._calculate_complexity(diff, title, description)
-        
+
         # Calculate risk score
         risk_score = self._calculate_risk(diff, title, description)
-        
+
         # Calculate clarity score
         clarity_score = self._calculate_clarity(diff, title, description)
-        
+
         # Generate summary
         summary = self._generate_summary(work_type, diff, title, description)
-        
+
         return {
             "work_type": work_type,
             "complexity_score": complexity_score,
@@ -76,65 +76,87 @@ class GitHubActionAnalyzer:
     def _detect_work_type(self, title: str, description: str, diff: str) -> str:
         """Detect work type based on title, description, and diff."""
         text = f"{title} {description}".lower()
-        
+
         # Check for explicit keywords
         if any(keyword in text for keyword in ["fix", "bug", "issue", "error", "problem"]):
             return "Bug Fix"
-        
+
         if any(keyword in text for keyword in ["test", "spec", "unit", "integration"]):
             return "Testing"
-        
+
         if any(keyword in text for keyword in ["doc", "readme", "guide", "comment"]):
             return "Documentation"
-        
+
         if any(keyword in text for keyword in ["refactor", "clean", "optimize", "improve"]):
             return "Refactor"
-        
+
         if any(keyword in text for keyword in ["chore", "deps", "dependency", "build", "ci"]):
             return "Chore"
-        
+
         # Analyze diff patterns
-        diff_lines = diff.split('\n')
-        
+        diff_lines = diff.split("\n")
+
         # Check for test files
-        test_files = sum(1 for line in diff_lines if line.startswith('+++') and any(
-            test_dir in line for test_dir in ['test', 'spec', '__test__']
-        ))
-        
+        test_files = sum(
+            1
+            for line in diff_lines
+            if line.startswith("+++")
+            and any(test_dir in line for test_dir in ["test", "spec", "__test__"])
+        )
+
         # Check for documentation files
-        doc_files = sum(1 for line in diff_lines if line.startswith('+++') and any(
-            ext in line for ext in ['.md', '.rst', '.txt', 'README', 'CHANGELOG']
-        ))
-        
+        doc_files = sum(
+            1
+            for line in diff_lines
+            if line.startswith("+++")
+            and any(ext in line for ext in [".md", ".rst", ".txt", "README", "CHANGELOG"])
+        )
+
         # Check for config/build files
-        config_files = sum(1 for line in diff_lines if line.startswith('+++') and any(
-            file_type in line for file_type in ['.yml', '.yaml', '.toml', '.json', 'Dockerfile', 'requirements']
-        ))
-        
-        if test_files > 0 and test_files >= len([l for l in diff_lines if l.startswith('+++')]) * 0.5:
+        config_files = sum(
+            1
+            for line in diff_lines
+            if line.startswith("+++")
+            and any(
+                file_type in line
+                for file_type in [".yml", ".yaml", ".toml", ".json", "Dockerfile", "requirements"]
+            )
+        )
+
+        if (
+            test_files > 0
+            and test_files >= len([l for l in diff_lines if l.startswith("+++")]) * 0.5
+        ):
             return "Testing"
-        
-        if doc_files > 0 and doc_files >= len([l for l in diff_lines if l.startswith('+++')]) * 0.5:
+
+        if doc_files > 0 and doc_files >= len([l for l in diff_lines if l.startswith("+++")]) * 0.5:
             return "Documentation"
-        
-        if config_files > 0 and config_files >= len([l for l in diff_lines if l.startswith('+++')]) * 0.5:
+
+        if (
+            config_files > 0
+            and config_files >= len([l for l in diff_lines if l.startswith("+++")]) * 0.5
+        ):
             return "Chore"
-        
+
         # Default to New Feature for substantial changes
         return "New Feature"
 
     def _calculate_complexity(self, diff: str, title: str, description: str) -> int:
         """Calculate complexity score (1-10)."""
         score = 1
-        
+
         # Count lines of code changes
-        diff_lines = diff.split('\n')
-        added_lines = sum(1 for line in diff_lines if line.startswith('+') and not line.startswith('+++'))
-        deleted_lines = sum(1 for line in diff_lines if line.startswith('-') and not line.startswith('---'))
-        
+        diff_lines = diff.split("\n")
+        added_lines = sum(
+            1 for line in diff_lines if line.startswith("+") and not line.startswith("+++")
+        )
+        deleted_lines = sum(
+            1 for line in diff_lines if line.startswith("-") and not line.startswith("---")
+        )
+
         # File count
-        files_changed = len([line for line in diff_lines if line.startswith('+++')])
-        
+        files_changed = len([line for line in diff_lines if line.startswith("+++")])
+
         # Base complexity on lines changed
         total_lines = added_lines + deleted_lines
         if total_lines > 500:
@@ -145,92 +167,107 @@ class GitHubActionAnalyzer:
             score += 2
         elif total_lines > 50:
             score += 1
-        
+
         # Add complexity for multiple files
         if files_changed > 10:
             score += 2
         elif files_changed > 5:
             score += 1
-        
+
         # Look for complex patterns in diff
         complex_patterns = [
-            r'class\s+\w+',  # Class definitions
-            r'def\s+\w+',    # Function definitions
-            r'async\s+def',  # Async functions
-            r'@\w+',         # Decorators
-            r'import\s+\w+', # New imports
-            r'from\s+\w+',   # New imports
-            r'if\s+.*:',     # Conditional logic
-            r'for\s+.*:',    # Loops
-            r'while\s+.*:',  # Loops
-            r'try:',         # Exception handling
-            r'except\s+.*:', # Exception handling
+            r"class\s+\w+",  # Class definitions
+            r"def\s+\w+",  # Function definitions
+            r"async\s+def",  # Async functions
+            r"@\w+",  # Decorators
+            r"import\s+\w+",  # New imports
+            r"from\s+\w+",  # New imports
+            r"if\s+.*:",  # Conditional logic
+            r"for\s+.*:",  # Loops
+            r"while\s+.*:",  # Loops
+            r"try:",  # Exception handling
+            r"except\s+.*:",  # Exception handling
         ]
-        
+
         for pattern in complex_patterns:
             matches = len(re.findall(pattern, diff))
             if matches > 10:
                 score += 2
             elif matches > 5:
                 score += 1
-        
+
         return min(10, max(1, score))
 
     def _calculate_risk(self, diff: str, title: str, description: str) -> int:
         """Calculate risk score (1-10)."""
         score = 1
-        
+
         # High-risk patterns
         high_risk_patterns = [
-            r'delete|remove|drop',           # Deletion operations
-            r'password|secret|key|token',    # Security-related
-            r'auth|login|session',           # Authentication
-            r'admin|root|sudo',              # Privilege escalation
-            r'database|db|sql',              # Database changes
-            r'migration|migrate',            # Database migrations
-            r'config|settings|env',          # Configuration changes
-            r'api|endpoint|route',           # API changes
-            r'security|vulnerability',       # Security fixes
-            r'production|prod|deploy',       # Production changes
+            r"delete|remove|drop",  # Deletion operations
+            r"password|secret|key|token",  # Security-related
+            r"auth|login|session",  # Authentication
+            r"admin|root|sudo",  # Privilege escalation
+            r"database|db|sql",  # Database changes
+            r"migration|migrate",  # Database migrations
+            r"config|settings|env",  # Configuration changes
+            r"api|endpoint|route",  # API changes
+            r"security|vulnerability",  # Security fixes
+            r"production|prod|deploy",  # Production changes
         ]
-        
+
         diff_lower = diff.lower()
         title_lower = title.lower()
         desc_lower = description.lower()
-        
+
         for pattern in high_risk_patterns:
-            if re.search(pattern, diff_lower) or re.search(pattern, title_lower) or re.search(pattern, desc_lower):
+            if (
+                re.search(pattern, diff_lower)
+                or re.search(pattern, title_lower)
+                or re.search(pattern, desc_lower)
+            ):
                 score += 1
-        
+
         # Check for critical files
-        diff_lines = diff.split('\n')
+        diff_lines = diff.split("\n")
         critical_files = [
-            'dockerfile', 'docker-compose', 'requirements.txt', 'package.json',
-            'pyproject.toml', 'setup.py', 'makefile', 'justfile',
-            '.env', 'config', 'settings', 'constants'
+            "dockerfile",
+            "docker-compose",
+            "requirements.txt",
+            "package.json",
+            "pyproject.toml",
+            "setup.py",
+            "makefile",
+            "justfile",
+            ".env",
+            "config",
+            "settings",
+            "constants",
         ]
-        
+
         for line in diff_lines:
-            if line.startswith('+++'):
+            if line.startswith("+++"):
                 filename = line[4:].lower()
                 if any(critical in filename for critical in critical_files):
                     score += 1
-        
+
         # Large changes are riskier
-        total_lines = len([l for l in diff_lines if l.startswith(('+', '-')) and not l.startswith(('+++', '---'))])
+        total_lines = len(
+            [l for l in diff_lines if l.startswith(("+", "-")) and not l.startswith(("+++", "---"))]
+        )
         if total_lines > 500:
             score += 3
         elif total_lines > 200:
             score += 2
         elif total_lines > 100:
             score += 1
-        
+
         return min(10, max(1, score))
 
     def _calculate_clarity(self, diff: str, title: str, description: str) -> int:
         """Calculate clarity score (1-10)."""
         score = 5  # Start with neutral
-        
+
         # Title quality
         if len(title) < 20:
             score -= 1
@@ -238,65 +275,69 @@ class GitHubActionAnalyzer:
             score -= 1
         else:
             score += 1
-        
+
         # Description quality
         if not description or len(description) < 50:
             score -= 2
         elif len(description) > 200:
             score += 1
-        
+
         # Check for good patterns in diff
         good_patterns = [
-            r'#.*comment',           # Comments
-            r'""".*"""',            # Docstrings
-            r"'''.*'''",            # Docstrings
-            r'TODO|FIXME|NOTE',     # Code annotations
-            r'def\s+test_',         # Test functions
-            r'assert\s+',           # Test assertions
-            r'readme|documentation', # Documentation
+            r"#.*comment",  # Comments
+            r'""".*"""',  # Docstrings
+            r"'''.*'''",  # Docstrings
+            r"TODO|FIXME|NOTE",  # Code annotations
+            r"def\s+test_",  # Test functions
+            r"assert\s+",  # Test assertions
+            r"readme|documentation",  # Documentation
         ]
-        
+
         for pattern in good_patterns:
             matches = len(re.findall(pattern, diff, re.IGNORECASE | re.DOTALL))
             if matches > 0:
                 score += 1
-        
+
         # Check for unclear patterns
         unclear_patterns = [
-            r'TODO.*',              # Too many TODOs
-            r'FIXME.*',             # Too many FIXMEs
-            r'hack|temp|tmp',       # Temporary code
-            r'magic.*number',       # Magic numbers
-            r'hardcode',            # Hardcoded values
+            r"TODO.*",  # Too many TODOs
+            r"FIXME.*",  # Too many FIXMEs
+            r"hack|temp|tmp",  # Temporary code
+            r"magic.*number",  # Magic numbers
+            r"hardcode",  # Hardcoded values
         ]
-        
+
         for pattern in unclear_patterns:
             matches = len(re.findall(pattern, diff, re.IGNORECASE))
             if matches > 3:
                 score -= 1
-        
+
         return min(10, max(1, score))
 
     def _generate_summary(self, work_type: str, diff: str, title: str, description: str) -> str:
         """Generate a summary of the changes."""
         # Count changes
-        diff_lines = diff.split('\n')
-        added_lines = sum(1 for line in diff_lines if line.startswith('+') and not line.startswith('+++'))
-        deleted_lines = sum(1 for line in diff_lines if line.startswith('-') and not line.startswith('---'))
-        files_changed = len([line for line in diff_lines if line.startswith('+++')])
-        
+        diff_lines = diff.split("\n")
+        added_lines = sum(
+            1 for line in diff_lines if line.startswith("+") and not line.startswith("+++")
+        )
+        deleted_lines = sum(
+            1 for line in diff_lines if line.startswith("-") and not line.startswith("---")
+        )
+        files_changed = len([line for line in diff_lines if line.startswith("+++")])
+
         # Extract file types
         file_extensions = set()
         for line in diff_lines:
-            if line.startswith('+++'):
+            if line.startswith("+++"):
                 filename = line[4:].strip()
-                if '.' in filename:
-                    ext = filename.split('.')[-1]
+                if "." in filename:
+                    ext = filename.split(".")[-1]
                     file_extensions.add(ext)
-        
+
         # Build summary
         summary_parts = []
-        
+
         if work_type == "New Feature":
             summary_parts.append("Introduces new functionality")
         elif work_type == "Bug Fix":
@@ -309,23 +350,23 @@ class GitHubActionAnalyzer:
             summary_parts.append("Updates documentation")
         else:
             summary_parts.append("Makes maintenance changes")
-        
+
         if files_changed == 1:
             summary_parts.append("in 1 file")
         elif files_changed > 1:
             summary_parts.append(f"across {files_changed} files")
-        
+
         if added_lines > 0 and deleted_lines > 0:
             summary_parts.append(f"with {added_lines} additions and {deleted_lines} deletions")
         elif added_lines > 0:
             summary_parts.append(f"adding {added_lines} lines")
         elif deleted_lines > 0:
             summary_parts.append(f"removing {deleted_lines} lines")
-        
+
         if file_extensions:
             ext_list = sorted(file_extensions)[:3]  # Show max 3 extensions
             summary_parts.append(f"({', '.join(ext_list)} files)")
-        
+
         return " ".join(summary_parts)
 
     def analyze_diff(self, diff: str, title: str, description: str = "") -> dict[str, Any]:
@@ -344,7 +385,7 @@ class GitHubActionAnalyzer:
         """Analyze a PR diff using Claude API."""
         # Import requests only when needed
         import requests
-        
+
         # Prepare the prompt
         prompt = self._create_prompt(title, description, diff)
 
@@ -444,21 +485,25 @@ Respond ONLY with the JSON object."""
             }
 
     def calculate_impact_score(
-        self, complexity: int, risk: int, clarity: int, 
-        lines_changed: int = 0, files_changed: int = 0
+        self,
+        complexity: int,
+        risk: int,
+        clarity: int,
+        lines_changed: int = 0,
+        files_changed: int = 0,
     ) -> float:
         """Calculate weighted impact score with size-based multipliers."""
         # Base PRD formula: 40% complexity + 50% risk + 10% clarity
         base_score = (0.4 * complexity) + (0.5 * risk) + (0.1 * clarity)
-        
+
         # Size multiplier for large changes
         size_multiplier = 1.0
         if lines_changed > 1000 or files_changed > 10:
             # Scale multiplier based on change size
             line_factor = min(lines_changed / 5000, 1.0)  # Cap at 5k lines
-            file_factor = min(files_changed / 50, 1.0)     # Cap at 50 files
+            file_factor = min(files_changed / 50, 1.0)  # Cap at 50 files
             size_multiplier = 1.0 + (0.5 * max(line_factor, file_factor))
-        
+
         final_score = base_score * size_multiplier
         return min(final_score, 10.0)  # Cap at maximum score
 
@@ -480,9 +525,11 @@ Respond ONLY with the JSON object."""
 
         # Calculate impact score
         impact_score = self.calculate_impact_score(
-            analysis["complexity_score"], analysis["risk_score"], analysis["clarity_score"],
+            analysis["complexity_score"],
+            analysis["risk_score"],
+            analysis["clarity_score"],
             lines_changed=pr_data.get("additions", 0) + pr_data.get("deletions", 0),
-            files_changed=pr_data.get("changed_files", 0)
+            files_changed=pr_data.get("changed_files", 0),
         )
 
         # Build final result

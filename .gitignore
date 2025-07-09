@@ -55,3 +55,5 @@ developer_metrics.csv
 .pytest_cache/
 htmlcov/
 .history/
+.coverage
+coverage.xml

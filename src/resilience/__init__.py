@@ -22,7 +22,7 @@ from .monitoring import (
 
 __all__ = [
     "CircuitBreaker",
-    "CircuitBreakerConfig", 
+    "CircuitBreakerConfig",
     "CircuitBreakerError",
     "CircuitBreakerOpenError",
     "CircuitBreakerState",
@@ -30,7 +30,7 @@ __all__ = [
     "async_circuit_breaker",
     "circuit_breaker",
     "export_circuit_breaker_report",
-    "get_all_circuit_breaker_stats", 
+    "get_all_circuit_breaker_stats",
     "get_circuit_breaker",
     "get_circuit_breaker_details",
     "get_circuit_breaker_health",

@@ -25,11 +25,10 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from src.analysis.analysis_engine import AnalysisEngine
-from src.analysis.context_preparer import ContextPreparer
 from src.config.config_manager import ConfigManager
 from src.config.state_manager import StateManager
-from src.data.unified_processor import UnifiedDataProcessor
 from src.data.developer_metrics import DeveloperMetricsAggregator
+from src.data.unified_processor import UnifiedDataProcessor
 
 
 def setup_logging(log_level: str = "INFO", log_file: str | None = None) -> None:
@@ -462,7 +461,7 @@ def execute_pipeline(
             print("✅ State updated successfully")
             
             # Display summary statistics
-            print(f"\n📈 Analysis Summary:")
+            print("\n📈 Analysis Summary:")
             print(f"   Total records analyzed: {len(all_results)}")
             print(f"   PRs processed: {len(pr_results)}")
             print(f"   Commits processed: {len(commit_results)}")
@@ -483,7 +482,7 @@ def execute_pipeline(
             pipeline_seconds = int(pipeline_duration % 60)
             
             if recovery_mode:
-                print(f"🔄 Pipeline completed using error recovery")
+                print("🔄 Pipeline completed using error recovery")
             
             print(f"⏱️ Total pipeline time: {pipeline_minutes}m {pipeline_seconds}s")
             
@@ -603,7 +602,7 @@ def main() -> int:
         minutes = int(duration // 60)
         seconds = int(duration % 60)
         
-        print(f"\n✅ Pipeline completed successfully!")
+        print("\n✅ Pipeline completed successfully!")
         print(f"⏱️ Total execution time: {minutes}m {seconds}s")
         
         return 0

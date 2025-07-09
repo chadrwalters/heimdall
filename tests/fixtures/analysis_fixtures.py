@@ -429,3 +429,62 @@ index 1234567..abcdefg 100644
         base_diff += "+    return result\n+\n"
 
     return base_diff
+
+
+def sample_pr_data():
+    """Generate a sample PR data structure."""
+    return SAMPLE_PRS["feature"]
+
+
+def large_pr_data():
+    """Generate a large PR data structure for load testing."""
+    return {
+        "id": 2001,
+        "number": 2001,
+        "title": "Large-scale refactoring: Modernize codebase architecture",
+        "body": "This PR contains a comprehensive refactoring of the entire codebase:\n\n"
+        + "- Migrates from legacy framework to modern architecture\n"
+        + "- Adds comprehensive type hints and documentation\n"
+        + "- Implements new design patterns\n"
+        + "- Updates all dependencies\n"
+        + "- Refactors database layer\n"
+        + "- Adds extensive test coverage\n\n"
+        + "Linear: ARCH-2001",
+        "user": {"login": "senior_developer"},
+        "created_at": datetime.now(UTC).isoformat() + "Z",
+        "additions": 15000,
+        "deletions": 8000,
+        "changed_files": 150,
+        "html_url": "https://github.com/test/repo/pull/2001",
+        "base": {"ref": "main", "repo": {"name": "test-repo"}},
+        "files": [
+            {"filename": f"src/module_{i}/file_{j}.py"} for i in range(1, 21) for j in range(1, 8)
+        ],
+    }
+
+
+def sample_commit_data():
+    """Generate sample commit data structure."""
+    return {
+        "sha": "abc123def456",
+        "commit": {
+            "message": "Fix user authentication bug\n\nLinear: BUG-123",
+            "author": {
+                "name": "Developer",
+                "email": "dev@example.com",
+                "date": datetime.now(UTC).isoformat() + "Z",
+            },
+        },
+        "author": {"login": "developer1"},
+        "html_url": "https://github.com/test/repo/commit/abc123def456",
+        "stats": {"additions": 25, "deletions": 10, "total": 35},
+        "files": [
+            {"filename": "src/auth.py", "additions": 20, "deletions": 5, "changes": 25},
+            {"filename": "tests/test_auth.py", "additions": 5, "deletions": 5, "changes": 10},
+        ],
+    }
+
+
+def mock_claude_responses():
+    """Generate mock Claude API responses."""
+    return SAMPLE_API_RESPONSES

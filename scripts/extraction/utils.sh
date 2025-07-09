@@ -158,9 +158,17 @@ cache_response() {
     local data="$2"
     local ttl_seconds="$3"
     local etag="${4:-}"
+    local max_cache_size_mb="${MAX_CACHE_SIZE_MB:-500}"  # Default 500MB
     
     # Create cache directory if it doesn't exist
     mkdir -p "$(dirname "$cache_file")"
+    
+    # Check cache size before writing
+    local cache_size_mb=$(du -sm "${CACHE_DIR}" 2>/dev/null | cut -f1 || echo "0")
+    if [ "$cache_size_mb" -gt "$max_cache_size_mb" ]; then
+        # Try to clean up some space
+        clean_cache >/dev/null 2>&1
+    fi
     
     # Create cache entry
     local cache_entry=$(jq -n \
@@ -175,7 +183,10 @@ cache_response() {
             data: $data
         }')
     
-    echo "$cache_entry" > "$cache_file"
+    # Use atomic write to prevent race conditions
+    local temp_file="${cache_file}.tmp.$$"
+    echo "$cache_entry" > "$temp_file"
+    mv -f "$temp_file" "$cache_file"
 }
 
 # Get cache statistics
@@ -196,6 +207,7 @@ get_cache_stats() {
 clean_cache() {
     local cache_dir="${CACHE_DIR}"
     local cleaned_count=0
+    local max_cache_size_mb="${MAX_CACHE_SIZE_MB:-500}"  # Default 500MB
     
     if [ ! -d "$cache_dir" ]; then
         return 0
@@ -212,7 +224,26 @@ clean_cache() {
         fi
     done
     
-    echo "Cleaned $cleaned_count expired cache entries"
+    # Check total cache size and clean oldest files if over limit
+    local cache_size_mb=$(du -sm "$cache_dir" 2>/dev/null | cut -f1 || echo "0")
+    if [ "$cache_size_mb" -gt "$max_cache_size_mb" ]; then
+        echo "Cache size ($cache_size_mb MB) exceeds limit ($max_cache_size_mb MB), cleaning oldest files..."
+        
+        # Remove oldest files until under limit
+        while [ "$cache_size_mb" -gt "$max_cache_size_mb" ]; do
+            # Find oldest cache file
+            local oldest_file=$(find "$cache_dir" -name "*.json" -type f -printf '%T+ %p\n' 2>/dev/null | sort | head -1 | cut -d' ' -f2-)
+            if [ -n "$oldest_file" ] && [ -f "$oldest_file" ]; then
+                rm -f "$oldest_file"
+                ((cleaned_count++))
+                cache_size_mb=$(du -sm "$cache_dir" 2>/dev/null | cut -f1 || echo "0")
+            else
+                break
+            fi
+        done
+    fi
+    
+    echo "Cleaned $cleaned_count cache entries (current size: ${cache_size_mb}MB)"
 }
 
 # Export functions for use in other scripts

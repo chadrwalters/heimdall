@@ -26,26 +26,37 @@ class GitHubActionAnalyzer:
 
     def detect_ai_assistance(self, pr_data: dict[str, Any]) -> tuple[bool, str | None]:
         """Detect if PR was created with AI assistance."""
-        # Check PR body for AI markers
+        # Check PR body and title for AI markers
         body = (pr_data.get("body") or "").lower()
         title = (pr_data.get("title") or "").lower()
-
-        ai_markers = {
-            "copilot": ["co-authored-by: github copilot", "copilot"],
-            "claude": ["claude", "anthropic", "🤖 generated with claude"],
-            "cursor": ["cursor", "generated with cursor"],
-            "chatgpt": ["chatgpt", "openai", "gpt"],
+        
+        # Strong AI markers (high confidence)
+        strong_markers = {
+            "claude": ["🤖 generated with claude", "generated with claude code", "co-authored-by: claude", "claude code"],
+            "copilot": ["co-authored-by: github copilot", "created with copilot", "generated with copilot"],
+            "cursor": ["generated with cursor", "created with cursor"],
+            "chatgpt": ["generated with chatgpt", "created with chatgpt"],
         }
-
-        for tool, markers in ai_markers.items():
+        
+        # Check for strong markers first
+        for tool, markers in strong_markers.items():
             for marker in markers:
                 if marker in body or marker in title:
                     return True, tool.capitalize()
-
-        # Check commit messages in PR
-        if pr_data.get("commits_url"):
-            # Note: In real implementation, would fetch commits
-            pass
+        
+        # Weaker markers (lower confidence, avoid false positives)
+        weak_markers = {
+            "claude": ["anthropic"],
+            "chatgpt": ["openai", "gpt-4"],
+        }
+        
+        # Only check weak markers if they're in context of generation/assistance
+        text = f"{title} {body}"
+        if any(phrase in text for phrase in ["generated", "created", "assisted", "help"]):
+            for tool, markers in weak_markers.items():
+                for marker in markers:
+                    if marker in text:
+                        return True, tool.capitalize()
 
         return False, None
 

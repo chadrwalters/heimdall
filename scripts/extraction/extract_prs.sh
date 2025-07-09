@@ -43,6 +43,15 @@ fetch_pr_details() {
     local pr_number="$2"
     local retry_count=0
     
+    # Check cache first
+    local cache_file=$(get_cache_path "prs" "${repo}_details_${pr_number}")
+    local cached_data=$(get_cached_data "$cache_file" 86400)  # 24 hours TTL
+    
+    if [ $? -eq 0 ]; then
+        echo "$cached_data"
+        return 0
+    fi
+    
     while [ $retry_count -lt $MAX_RETRIES ]; do
         # Fetch PR details
         local pr_details=$(gh api \
@@ -64,12 +73,17 @@ fetch_pr_details() {
         fi
         
         # Extract fields
-        echo "$pr_details" | jq -r '{
+        local result=$(echo "$pr_details" | jq -r '{
             changed_files: .changed_files,
             additions: .additions,
             deletions: .deletions,
             body: .body
-        }'
+        }')
+        
+        # Cache the result
+        cache_response "$cache_file" "$result" 86400
+        
+        echo "$result"
         return 0
     done
     
@@ -90,18 +104,30 @@ fetch_repo_prs() {
     local has_more=true
     
     while [ "$has_more" == "true" ]; do
-        local prs=$(gh pr list \
-            --repo "${GITHUB_ORG}/${repo}" \
-            --state all \
-            --limit 100 \
-            --json number,id,title,author,state,createdAt,mergedAt,closedAt,url,baseRefName,headRefName \
-            --search "created:>=${start_date}" 2>&1)
+        # Check cache for this page
+        local cache_file=$(get_cache_path "prs" "${repo}_list_p${page}")
+        local cached_data=$(get_cached_data "$cache_file" 3600)  # 1 hour TTL
         
-        # Check for errors
-        if echo "$prs" | grep -q "error"; then
-            echo "Error fetching PRs for $repo: $prs" >&2
-            rm -f "$temp_file"
-            return 1
+        if [ $? -eq 0 ]; then
+            echo "📁 Using cached PR list for $repo page $page"
+            local prs="$cached_data"
+        else
+            local prs=$(gh pr list \
+                --repo "${GITHUB_ORG}/${repo}" \
+                --state all \
+                --limit 100 \
+                --json number,id,title,author,state,createdAt,mergedAt,closedAt,url,baseRefName,headRefName \
+                --search "created:>=${start_date}" 2>&1)
+        
+            # Check for errors
+            if echo "$prs" | grep -q "error"; then
+                echo "Error fetching PRs for $repo: $prs" >&2
+                rm -f "$temp_file"
+                return 1
+            fi
+            
+            # Cache the PR list
+            cache_response "$cache_file" "$prs" 3600
         fi
         
         # Process each PR

@@ -109,5 +109,112 @@ validate_env() {
     fi
 }
 
+# Cache management functions
+CACHE_DIR=".cache"
+
+# Get cache file path for a resource
+get_cache_path() {
+    local resource_type="$1"  # repos, prs, commits
+    local resource_key="$2"   # repo name, pr_id, sha, etc.
+    echo "${CACHE_DIR}/${resource_type}/${resource_key}.json"
+}
+
+# Check if cache entry is valid (not expired)
+is_cache_valid() {
+    local cache_file="$1"
+    local ttl_seconds="$2"
+    
+    if [ ! -f "$cache_file" ]; then
+        return 1
+    fi
+    
+    local cached_at=$(jq -r '.cached_at // empty' "$cache_file" 2>/dev/null)
+    if [ -z "$cached_at" ]; then
+        return 1
+    fi
+    
+    local cached_timestamp=$(date -d "$cached_at" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%SZ" "$cached_at" +%s 2>/dev/null)
+    local current_timestamp=$(date +%s)
+    local age_seconds=$((current_timestamp - cached_timestamp))
+    
+    [ "$age_seconds" -lt "$ttl_seconds" ]
+}
+
+# Get cached data if valid
+get_cached_data() {
+    local cache_file="$1"
+    local ttl_seconds="$2"
+    
+    if is_cache_valid "$cache_file" "$ttl_seconds"; then
+        jq -r '.data' "$cache_file" 2>/dev/null
+        return 0
+    fi
+    return 1
+}
+
+# Cache API response
+cache_response() {
+    local cache_file="$1"
+    local data="$2"
+    local ttl_seconds="$3"
+    local etag="${4:-}"
+    
+    # Create cache directory if it doesn't exist
+    mkdir -p "$(dirname "$cache_file")"
+    
+    # Create cache entry
+    local cache_entry=$(jq -n \
+        --arg cached_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+        --arg ttl_seconds "$ttl_seconds" \
+        --arg etag "$etag" \
+        --argjson data "$data" \
+        '{
+            cached_at: $cached_at,
+            ttl_seconds: ($ttl_seconds | tonumber),
+            etag: $etag,
+            data: $data
+        }')
+    
+    echo "$cache_entry" > "$cache_file"
+}
+
+# Get cache statistics
+get_cache_stats() {
+    local cache_dir="${CACHE_DIR}"
+    local total_files=0
+    local total_size=0
+    
+    if [ -d "$cache_dir" ]; then
+        total_files=$(find "$cache_dir" -name "*.json" | wc -l | tr -d ' ')
+        total_size=$(du -sm "$cache_dir" 2>/dev/null | cut -f1 || echo "0")
+    fi
+    
+    echo "Cache files: $total_files, Size: ${total_size}MB"
+}
+
+# Clean expired cache entries
+clean_cache() {
+    local cache_dir="${CACHE_DIR}"
+    local cleaned_count=0
+    
+    if [ ! -d "$cache_dir" ]; then
+        return 0
+    fi
+    
+    # Find all cache files and check if they're expired
+    find "$cache_dir" -name "*.json" | while read -r cache_file; do
+        local cached_at=$(jq -r '.cached_at // empty' "$cache_file" 2>/dev/null)
+        local ttl_seconds=$(jq -r '.ttl_seconds // 3600' "$cache_file" 2>/dev/null)
+        
+        if [ -n "$cached_at" ] && ! is_cache_valid "$cache_file" "$ttl_seconds"; then
+            rm -f "$cache_file"
+            ((cleaned_count++))
+        fi
+    done
+    
+    echo "Cleaned $cleaned_count expired cache entries"
+}
+
 # Export functions for use in other scripts
 export -f date_cmd format_date days_ago show_progress handle_rate_limit check_gh_auth load_config update_state validate_env
+export -f get_cache_path is_cache_valid get_cached_data cache_response get_cache_stats clean_cache

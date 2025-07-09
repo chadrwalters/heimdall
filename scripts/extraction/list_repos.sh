@@ -18,60 +18,84 @@ fetch_all_repos() {
     
     echo "[]" > "$temp_file"
     
-    echo "Fetching repositories from organization: $org"
+    # Check cache first for organization repositories
+    local cache_file=$(get_cache_path "repos" "$org")
+    local cached_data=$(get_cached_data "$cache_file" 21600)  # 6 hours TTL
     
-    while true; do
-        echo -n "Fetching page $page... "
+    if [ $? -eq 0 ]; then
+        echo "📁 Using cached repository list for $org"
+        echo "$cached_data" > "$temp_file"
+    else
+        echo "🔄 Fetching repositories from organization: $org"
         
-        # Fetch repositories for current page
-        local response=$(gh api \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "/orgs/${org}/repos?per_page=${per_page}&page=${page}&type=all" 2>&1)
+        while true; do
+            echo -n "Fetching page $page... "
+            
+            # Check cache for this page
+            local page_cache_file=$(get_cache_path "repos" "${org}_page_${page}")
+            local page_cached_data=$(get_cached_data "$page_cache_file" 21600)  # 6 hours TTL
+            
+            if [ $? -eq 0 ]; then
+                echo "cached"
+                local response="$page_cached_data"
+            else
+                # Fetch repositories for current page
+                local response=$(gh api \
+                    -H "Accept: application/vnd.github+json" \
+                    -H "X-GitHub-Api-Version: 2022-11-28" \
+                    "/orgs/${org}/repos?per_page=${per_page}&page=${page}&type=all" 2>&1)
         
-        # Check for rate limit
-        if echo "$response" | grep -q "rate limit"; then
-            handle_rate_limit 0 || exit 1
-            continue
-        fi
+                # Check for rate limit
+                if echo "$response" | grep -q "rate limit"; then
+                    handle_rate_limit 0 || exit 1
+                    continue
+                fi
+                
+                # Check for errors
+                if echo "$response" | grep -q "error"; then
+                    echo "Error: $response" >&2
+                    rm -f "$temp_file"
+                    exit 1
+                fi
+                
+                # Cache the response for this page
+                cache_response "$page_cache_file" "$response" 21600
+                echo "fetched"
+            fi
+            
+            # Parse response
+            local repo_count=$(echo "$response" | jq 'length')
+            
+            # Break if no more repositories
+            if [ "$repo_count" -eq 0 ]; then
+                break
+            fi
         
-        # Check for errors
-        if echo "$response" | grep -q "error"; then
-            echo "Error: $response" >&2
-            rm -f "$temp_file"
-            exit 1
-        fi
+            # Filter and append to results
+            if [ "$INCLUDE_ARCHIVED" == "false" ]; then
+                # Exclude archived repositories
+                echo "$response" | jq '[.[] | select(.archived == false)]' > "${temp_file}.page"
+            else
+                echo "$response" | jq '.' > "${temp_file}.page"
+            fi
+            
+            # Merge with existing results
+            jq -s 'add' "$temp_file" "${temp_file}.page" > "${temp_file}.new"
+            mv "${temp_file}.new" "$temp_file"
+            rm -f "${temp_file}.page"
+            
+            # Increment page
+            ((page++))
+            
+            # Break if we got less than per_page (last page)
+            if [ "$repo_count" -lt "$per_page" ]; then
+                break
+            fi
+        done
         
-        # Parse response
-        local repo_count=$(echo "$response" | jq 'length')
-        echo "$repo_count repositories"
-        
-        # Break if no more repositories
-        if [ "$repo_count" -eq 0 ]; then
-            break
-        fi
-        
-        # Filter and append to results
-        if [ "$INCLUDE_ARCHIVED" == "false" ]; then
-            # Exclude archived repositories
-            echo "$response" | jq '[.[] | select(.archived == false)]' > "${temp_file}.page"
-        else
-            echo "$response" | jq '.' > "${temp_file}.page"
-        fi
-        
-        # Merge with existing results
-        jq -s 'add' "$temp_file" "${temp_file}.page" > "${temp_file}.new"
-        mv "${temp_file}.new" "$temp_file"
-        rm -f "${temp_file}.page"
-        
-        # Increment page
-        ((page++))
-        
-        # Break if we got less than per_page (last page)
-        if [ "$repo_count" -lt "$per_page" ]; then
-            break
-        fi
-    done
+        # Cache the complete repository list
+        cache_response "$cache_file" "$(cat "$temp_file")" 21600
+    fi
     
     # Extract relevant fields and sort by activity
     echo "Processing repository data..."

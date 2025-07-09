@@ -508,8 +508,8 @@ class AnalysisEngine:
 
         # Get analysis
         try:
-            response = self.claude_client.analyze(prompt)
-            result = self.prompt_engineer.parse_response(response["response"])
+            response = self.claude_client.analyze_code_change(prompt)
+            result = self.prompt_engineer.parse_response(response["content"])
 
             # Cache result
             if use_cache:

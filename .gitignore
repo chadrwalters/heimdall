@@ -49,6 +49,9 @@ org_prs.csv
 unified_pilot_data.csv
 developer_metrics.csv
 
+# Cache directory
+.cache/
+
 .claude/
 .taskmaster/
 .ruff_cache/

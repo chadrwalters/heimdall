@@ -108,7 +108,7 @@ class TestPromptEngineer:
 
     def test_calculate_impact_score(self, engineer):
         """Test impact score calculation."""
-        # Test with known values
+        # Test with known values - no size multiplier
         impact = engineer.calculate_impact_score(8, 6, 9)
         # Formula: (0.4 * 8 + 0.5 * 6 + 0.1 * 9) = 3.2 + 3.0 + 0.9 = 7.1
         assert impact == pytest.approx(7.1, rel=1e-2)
@@ -116,6 +116,12 @@ class TestPromptEngineer:
         # Test boundary values
         assert engineer.calculate_impact_score(10, 10, 10) == 10.0
         assert engineer.calculate_impact_score(1, 1, 1) == 1.0
+        
+        # Test with size multiplier for large changes
+        impact_large = engineer.calculate_impact_score(8, 6, 9, lines_changed=5000, files_changed=20)
+        # Should be higher than base score due to size multiplier
+        assert impact_large > 7.1
+        assert impact_large <= 10.0  # Capped at 10
 
     @pytest.mark.parametrize("title,expected", WORK_TYPE_TEST_CASES)
     def test_work_type_classification(self, engineer, title, expected):

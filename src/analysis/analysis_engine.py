@@ -123,7 +123,9 @@ class AnalysisEngine:
 
             # Calculate impact score
             impact_score = self.prompt_engineer.calculate_impact_score(
-                analysis.complexity_score, analysis.risk_score, analysis.clarity_score
+                analysis.complexity_score, analysis.risk_score, analysis.clarity_score,
+                lines_changed=context.metadata.get('additions', 0) + context.metadata.get('deletions', 0),
+                files_changed=context.metadata.get('changed_files', 0)
             )
 
             # Detect AI assistance
@@ -233,7 +235,9 @@ class AnalysisEngine:
 
             # Calculate impact score
             impact_score = self.prompt_engineer.calculate_impact_score(
-                analysis.complexity_score, analysis.risk_score, analysis.clarity_score
+                analysis.complexity_score, analysis.risk_score, analysis.clarity_score,
+                lines_changed=context.metadata.get('additions', 0) + context.metadata.get('deletions', 0),
+                files_changed=len(context.file_changes)
             )
 
             # Detect AI assistance

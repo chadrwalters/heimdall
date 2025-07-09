@@ -465,7 +465,9 @@ Respond ONLY with the JSON object."""
 
         # Calculate impact score
         impact_score = self.calculate_impact_score(
-            analysis["complexity_score"], analysis["risk_score"], analysis["clarity_score"]
+            analysis["complexity_score"], analysis["risk_score"], analysis["clarity_score"],
+            lines_changed=pr_data.get("additions", 0) + pr_data.get("deletions", 0),
+            files_changed=pr_data.get("changed_files", 0)
         )
 
         # Build final result

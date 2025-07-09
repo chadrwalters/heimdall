@@ -14,7 +14,7 @@ This project uses [Just](https://github.com/casey/just) as the command runner. A
 
 ### Prerequisites
 
-- Python 3.12+
+- Python 3.11+
 - [Just](https://github.com/casey/just) command runner
 - UV package manager
 - GitHub CLI (`gh`) authenticated

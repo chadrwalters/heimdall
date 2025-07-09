@@ -1,424 +1,437 @@
-# North Star Metrics Justfile
-# https://github.com/casey/just
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                  North Star Metrics Development Justfile                    ║
+# ║                                                                              ║
+# ║ 🌟 AI-powered engineering impact analytics framework                        ║
+# ║ 📊 Analyzes code changes across organizations for complexity/risk insights  ║
+# ║ 🔗 Integrates GitHub, Linear, and Anthropic Claude APIs                     ║
+# ║ 📈 Generates actionable metrics for engineering productivity                 ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+#
+# 📖 QUICK START:
+#   just setup           - Set up development environment from scratch
+#   just env-check       - Verify API keys and environment status
+#   just pilot <org>     - Run 7-day pilot analysis for organization
+#   just help            - Show detailed help and command groups
+#
+# 🔧 COMMON WORKFLOWS:
+#   Setup:      just setup → just env-check → just verify-apis
+#   Analysis:   just pilot <org> → just pipeline <org> 30
+#   Testing:    just test → just test-unit → just test-integration
+#   Quality:    just lint → just format → just coverage
+#
+# 📋 Type 'just' or 'just help' to see all available commands organized by category
 
-# Default recipe to display help
-default:
-    @echo "🌟 North Star Metrics - Command Runner"
+# Variables
+PY_VERSION := "3.11"
+VENV_DIR := ".venv"
+ANALYSIS_DIR := "analysis_results"
+LOGS_DIR := "logs"
+
+# Colors for output
+RED := "\\033[0;31m"
+GREEN := "\\033[0;32m"
+YELLOW := "\\033[1;33m"
+BLUE := "\\033[0;34m"
+PURPLE := "\\033[0;35m"
+CYAN := "\\033[0;36m"
+NC := "\\033[0m" # No Color
+
+# Default task - shows organized help instead of raw list
+_default:
+    @just help
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                            HELP & COMMAND GROUPS                            ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+# Show organized help with command groups and common workflows
+help:
+    @echo "╔══════════════════════════════════════════════════════════════════════════════╗"
+    @echo "║                    North Star Metrics Development Commands                  ║"
+    @echo "╚══════════════════════════════════════════════════════════════════════════════╝"
     @echo ""
-    @echo "📋 Quick Start:"
-    @echo "  just setup         - Initial project setup"
-    @echo "  just env-check     - Check environment status"
-    @echo "  just verify-apis   - Verify API connections"
-    @echo "  just pilot <org>   - Run 7-day pilot analysis"
+    @echo "🚀 QUICK START:"
+    @echo "  setup                  Set up development environment from scratch"
+    @echo "  env-check              Check environment variables and API keys status"
+    @echo "  verify-apis            Test connectivity to GitHub, Linear, and Anthropic APIs"
+    @echo "  pilot <org>            Run 7-day pilot analysis for organization"
+    @echo "  help                   Show this detailed help"
     @echo ""
-    @echo "📚 All Commands:"
-    @just --list
+    @echo "🔧 ENVIRONMENT & SETUP:"
+    @echo "  setup                  Initial project setup with Python venv and dependencies"
+    @echo "  dev-setup             Install development dependencies and tools"
+    @echo "  env-check             Show environment variables status"
+    @echo "  verify-apis           Verify all API connections (GitHub, Linear, Anthropic)"
+    @echo "  validate-config       Validate configuration files and settings"
+    @echo "  clean                 Clean build artifacts and temporary files"
+    @echo "  fresh-start           Complete reset and setup (clean → setup)"
+    @echo ""
+    @echo "📊 DATA EXTRACTION & ANALYSIS:"
+    @echo "  Extraction Commands:"
+    @echo "    extract <org> [days]        Extract data for organization (default: 7 days)"
+    @echo "    extract-incremental <org>   Extract only new data since last run"
+    @echo "    list-repos <org>           List all repositories for organization"
+    @echo "    extract-repo <org/repo>     Extract data for specific repository"
+    @echo ""
+    @echo "  Analysis Commands:"
+    @echo "    pilot <org>                Run 7-day pilot analysis (extract + analyze)"
+    @echo "    pipeline <org> <days>      Full pipeline: extract → analyze → generate reports"
+    @echo "    analyze [input]            Analyze extracted data (default: org_prs.csv)"
+    @echo "    reanalyze <input>          Re-run analysis on existing data"
+    @echo ""
+    @echo "  Report Generation:"
+    @echo "    generate-reports <input>   Generate comprehensive reports from analysis"
+    @echo "    export-metrics <input>     Export metrics in various formats"
+    @echo "    compare-periods <org>      Compare different time periods"
+    @echo ""
+    @echo "🧪 TESTING & QUALITY (Coverage Always Included):"
+    @echo "  Core Testing:"
+    @echo "    test                   Run all tests with coverage"
+    @echo "    test-unit             Run unit tests only"
+    @echo "    test-integration      Run integration tests with APIs"
+    @echo "    test-watch            Run tests in watch mode"
+    @echo ""
+    @echo "  Specialized Testing:"
+    @echo "    test-linear           Test Linear API integration"
+    @echo "    test-github           Test GitHub API integration"
+    @echo "    test-anthropic        Test Anthropic API integration"
+    @echo "    test-analysis         Test analysis engine"
+    @echo "    test-gh-analyzer      Test GitHub Actions analyzer"
+    @echo "    test-extraction       Test data extraction pipeline"
+    @echo ""
+    @echo "  Quality Assurance:"
+    @echo "    lint                  Run linting with ruff"
+    @echo "    format                Format code with ruff"
+    @echo "    typecheck             Run type checking with mypy"
+    @echo "    coverage              Generate test coverage report"
+    @echo "    quality-check         Run full quality suite (lint + format + typecheck)"
+    @echo ""
+    @echo "🔍 MONITORING & DEBUGGING:"
+    @echo "  System Health:"
+    @echo "    status                Show system status and health"
+    @echo "    health                Check API health and connectivity"
+    @echo "    logs [service]        Show logs for specific service"
+    @echo "    debug-extraction      Debug extraction issues"
+    @echo "    debug-analysis        Debug analysis issues"
+    @echo ""
+    @echo "  Data Management:"
+    @echo "    validate-data <file>  Validate data file integrity"
+    @echo "    repair-data <file>    Attempt to repair corrupted data"
+    @echo "    backup-data           Backup analysis data"
+    @echo "    restore-data          Restore from backup"
+    @echo ""
+    @echo "📈 ADVANCED OPERATIONS:"
+    @echo "  Automation:"
+    @echo "    schedule-analysis <org>    Setup scheduled analysis"
+    @echo "    run-scheduled             Run scheduled analysis jobs"
+    @echo "    update-github-actions     Update GitHub Actions workflows"
+    @echo ""
+    @echo "  Performance:"
+    @echo "    benchmark <org>           Benchmark analysis performance"
+    @echo "    profile-analysis <input>  Profile analysis performance"
+    @echo "    optimize-extraction       Optimize extraction performance"
+    @echo ""
+    @echo "🔐 SECURITY & SAFETY:"
+    @echo "  🚨 NEVER run destructive operations without confirmation"
+    @echo "  🔑 API keys are never logged or exposed"
+    @echo "  💾 Data is automatically backed up before major operations"
+    @echo "  🛡️ All operations include safety checks and validation"
+    @echo ""
+    @echo "💡 COMMON WORKFLOWS:"
+    @echo "  First Time Setup:    just setup → just env-check → just verify-apis"
+    @echo "  Quick Analysis:      just pilot organization-name"
+    @echo "  Full Analysis:       just pipeline organization-name 30"
+    @echo "  Development:         just test → just quality-check"
+    @echo "  Debugging:           just health → just logs → just debug-extraction"
+    @echo ""
+    @echo "📚 DOCUMENTATION:"
+    @echo "  docs/INDEX.md         Complete documentation hub"
+    @echo "  docs/setup/           Setup and configuration guides"
+    @echo "  docs/workflows/       Analysis workflows and procedures"
+    @echo "  docs/troubleshooting/ Common issues and solutions"
+    @echo ""
+    @echo "🆘 EMERGENCY PROCEDURES:"
+    @echo "  just health           Check if system is responding"
+    @echo "  just clean            Clean up corrupted state"
+    @echo "  just fresh-start      Complete reset and reinstall"
+    @echo "  just backup-data      Backup data before major operations"
 
-# Setup and Environment Management
-# ================================
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                           ENVIRONMENT & SETUP                               ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 
-# Initial project setup
+# Initial project setup with safety checks
 setup:
     @echo "🚀 Setting up North Star Metrics project..."
-    uv venv
-    uv pip sync pyproject.toml
-    @echo "✅ Setup complete. Run 'source .venv/bin/activate' to activate environment"
+    @echo "🔍 Checking Python version..."
+    @python --version | grep -E "3\.(11|12|13)" || (echo "❌ Python 3.11+ required" && exit 1)
+    @echo "📦 Creating virtual environment..."
+    @if [ ! -d "{{VENV_DIR}}" ]; then python -m venv {{VENV_DIR}}; fi
+    @echo "📚 Installing dependencies..."
+    @{{VENV_DIR}}/bin/pip install --upgrade pip
+    @{{VENV_DIR}}/bin/pip install -e .
+    @echo "📁 Creating necessary directories..."
+    @mkdir -p {{ANALYSIS_DIR}} {{LOGS_DIR}}
+    @echo "✅ Setup complete!"
+    @echo "🎯 Next steps:"
+    @echo "  1. Set up environment variables (see .env.example)"
+    @echo "  2. Run 'just env-check' to verify configuration"
+    @echo "  3. Run 'just verify-apis' to test API connections"
 
 # Install development dependencies
 dev-setup:
-    uv pip install -e '.[dev]'
+    @echo "🛠️ Installing development dependencies..."
+    @{{VENV_DIR}}/bin/pip install -e ".[dev]"
     @echo "✅ Development dependencies installed"
 
-# Verify all API connections
-verify-apis:
-    @echo "🔍 Verifying API connections..."
-    python scripts/verify_apis.py
-
-# Show environment variables status
+# Show environment variables status with security
 env-check:
     @echo "📋 Environment Variables Status:"
-    @test -n "${GITHUB_TOKEN:-}" && echo "GitHub Token: ✅ Set" || echo "GitHub Token: ❌ Not set"
-    @test -n "${LINEAR_API_KEY:-}${LINEAR_TOKEN:-}" && echo "Linear API Key: ✅ Set" || echo "Linear API Key: ❌ Not set"
-    @test -n "${ANTHROPIC_API_KEY:-}" && echo "Anthropic API Key: ✅ Set" || echo "Anthropic API Key: ❌ Not set"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @if [ -n "${GITHUB_TOKEN:-}" ]; then echo "GitHub Token: {{GREEN}}✅ Set{{NC}} (length: $${#GITHUB_TOKEN})"; else echo "GitHub Token: {{RED}}❌ Not set{{NC}}"; fi
+    @if [ -n "${LINEAR_API_KEY:-}${LINEAR_TOKEN:-}" ]; then echo "Linear API Key: {{GREEN}}✅ Set{{NC}}"; else echo "Linear API Key: {{RED}}❌ Not set{{NC}}"; fi
+    @if [ -n "${ANTHROPIC_API_KEY:-}" ]; then echo "Anthropic API Key: {{GREEN}}✅ Set{{NC}}"; else echo "Anthropic API Key: {{RED}}❌ Not set{{NC}}"; fi
+    @if [ -n "${ORGANIZATION_NAME:-}" ]; then echo "Organization: {{GREEN}}✅ Set{{NC}} (${ORGANIZATION_NAME})"; else echo "Organization: {{YELLOW}}⚠️ Not set{{NC}} (optional)"; fi
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# Data Extraction
-# ===============
+# Verify all API connections with detailed output
+verify-apis:
+    @echo "🔍 Verifying API connections..."
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @{{VENV_DIR}}/bin/python scripts/verify_apis.py
 
-# Run full data extraction for an organization
+# Validate configuration files
+validate-config:
+    @echo "🔧 Validating configuration..."
+    @{{VENV_DIR}}/bin/python scripts/test_config.py
+
+# Clean build artifacts and temporary files
+clean:
+    @echo "🧹 Cleaning build artifacts..."
+    @rm -rf build/ dist/ *.egg-info/ .pytest_cache/ __pycache__/
+    @find . -name "*.pyc" -delete
+    @find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+    @echo "✅ Clean complete"
+
+# Complete reset and setup
+fresh-start:
+    @echo "🔄 Performing fresh start..."
+    @just clean
+    @rm -rf {{VENV_DIR}}
+    @just setup
+    @echo "✅ Fresh start complete"
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                        DATA EXTRACTION & ANALYSIS                          ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+# Extract data for organization with safety checks
 extract org days="7":
     @echo "📊 Extracting data for {{org}} (last {{days}} days)..."
-    ./scripts/extraction/run_extraction.sh --org {{org}} --days {{days}}
+    @if [ {{days}} -gt 90 ]; then echo "⚠️ Large extraction ({{days}} days) - this may take a while"; fi
+    @{{VENV_DIR}}/bin/python -c "import sys; sys.exit(0 if '{{org}}' and len('{{org}}') > 0 else 1)" || (echo "❌ Organization name required" && exit 1)
+    @./scripts/extraction/run_extraction.sh --org {{org}} --days {{days}}
 
-# Run incremental extraction (only new data)
+# Run incremental extraction
 extract-incremental org:
     @echo "📊 Running incremental extraction for {{org}}..."
-    ./scripts/extraction/run_extraction.sh --org {{org}} --incremental
+    @./scripts/extraction/run_extraction.sh --org {{org}} --incremental
 
-# List all repositories for an organization
+# List all repositories for organization
 list-repos org:
     @echo "📋 Listing repositories for {{org}}..."
-    ./scripts/extraction/list_repos.sh {{org}}
+    @./scripts/extraction/list_repos.sh {{org}}
 
-# Testing
-# =======
+# Extract data for specific repository
+extract-repo repo days="7":
+    @echo "📊 Extracting data for repository {{repo}} (last {{days}} days)..."
+    @./scripts/extraction/run_extraction.sh --repo {{repo}} --days {{days}}
 
-# Run all tests
+# Run 7-day pilot analysis with comprehensive checks
+pilot org:
+    @echo "🚀 Running 7-day pilot analysis for {{org}}..."
+    @echo "🔍 Pre-flight checks..."
+    @just verify-apis
+    @echo "📊 Extracting data..."
+    @just extract {{org}} 7
+    @echo "🧠 Running analysis..."
+    @just analyze
+    @echo "📈 Generating reports..."
+    @just generate-reports
+    @echo "✅ Pilot analysis complete for {{org}}"
+
+# Full pipeline analysis
+pipeline org days:
+    @echo "🔄 Running full pipeline for {{org}} ({{days}} days)..."
+    @if [ {{days}} -gt 60 ]; then echo "⚠️ Large pipeline ({{days}} days) - this may take significant time"; fi
+    @echo "🔍 Pre-flight checks..."
+    @just verify-apis
+    @echo "📊 Extracting data..."
+    @just extract {{org}} {{days}}
+    @echo "🧠 Running analysis..."
+    @just analyze
+    @echo "📈 Generating reports..."
+    @just generate-reports
+    @echo "✅ Pipeline complete for {{org}}"
+
+# Analyze extracted data
+analyze input="org_prs.csv":
+    @echo "🧠 Running AI analysis on {{input}}..."
+    @if [ ! -f "{{input}}" ]; then echo "❌ Input file {{input}} not found"; exit 1; fi
+    @{{VENV_DIR}}/bin/python main.py --input {{input}}
+
+# Re-run analysis on existing data
+reanalyze input:
+    @echo "🔄 Re-running analysis on {{input}}..."
+    @just analyze {{input}}
+
+# Generate comprehensive reports
+generate-reports input="analysis_results.csv":
+    @echo "📈 Generating reports from {{input}}..."
+    @{{VENV_DIR}}/bin/python scripts/generate_reports.py {{input}}
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                             TESTING & QUALITY                              ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+# Run all tests with coverage
 test:
-    @echo "🧪 Running all tests..."
-    uv run python -m pytest tests/ -v
+    @echo "🧪 Running all tests with coverage..."
+    @{{VENV_DIR}}/bin/python -m pytest tests/ -v --cov=src --cov-report=html --cov-report=term-missing
 
 # Run unit tests only
 test-unit:
     @echo "🧪 Running unit tests..."
-    uv run python -m pytest tests/ -v -k "not integration"
+    @{{VENV_DIR}}/bin/python -m pytest tests/ -v -k "not integration" --cov=src --cov-report=term-missing
 
 # Run integration tests only
 test-integration:
     @echo "🧪 Running integration tests..."
-    uv run python -m pytest tests/ -v -k "integration"
+    @{{VENV_DIR}}/bin/python -m pytest tests/ -v -k "integration" --cov=src --cov-report=term-missing
 
-# Test Linear integration
+# Run tests in watch mode
+test-watch:
+    @echo "🧪 Running tests in watch mode..."
+    @{{VENV_DIR}}/bin/python -m pytest tests/ -v --cov=src -f
+
+# Test specific API integrations
 test-linear:
     @echo "🔗 Testing Linear integration..."
-    python scripts/test_linear_integration.py
+    @{{VENV_DIR}}/bin/python scripts/test_linear_integration.py
 
-# Test GitHub Actions analyzer
+test-github:
+    @echo "🐙 Testing GitHub integration..."
+    @{{VENV_DIR}}/bin/python scripts/test_github_integration.py
+
+test-anthropic:
+    @echo "🧠 Testing Anthropic integration..."
+    @{{VENV_DIR}}/bin/python scripts/test_analysis_integration.py
+
+test-analysis:
+    @echo "🧠 Testing analysis engine..."
+    @{{VENV_DIR}}/bin/python scripts/test_analysis_integration.py
+
 test-gh-analyzer:
     @echo "🤖 Testing GitHub Actions analyzer..."
-    python scripts/test_github_action_analyzer.py
+    @{{VENV_DIR}}/bin/python scripts/test_github_action_analyzer.py
 
-# Test analysis integration
-test-analysis:
-    @echo "🧠 Testing analysis integration..."
-    python scripts/test_analysis_integration.py
+test-extraction:
+    @echo "📊 Testing data extraction..."
+    @./scripts/test_extraction.sh
 
-# Analysis
-# ========
-
-# Run analysis on extracted data
-analyze input="org_prs.csv":
-    @echo "🧠 Running AI analysis on {{input}}..."
-    python -m src.analysis.run_analysis {{input}}
-
-# Run pilot analysis (7 days)
-pilot org:
-    @echo "🚀 Running pilot analysis for {{org}}..."
-    just extract {{org}} 7
-    just analyze
-
-# TaskMaster Commands
-# ===================
-
-# Show next task
-task-next:
-    @echo "📋 Getting next task..."
-    task-master next
-
-# Show task details
-task-show id:
-    @echo "📋 Showing task {{id}}..."
-    task-master show {{id}}
-
-# Mark task as in-progress
-task-start id:
-    @echo "▶️ Starting task {{id}}..."
-    task-master set-status --id={{id}} --status=in-progress
-
-# Mark task as done
-task-done id:
-    @echo "✅ Completing task {{id}}..."
-    task-master set-status --id={{id}} --status=done
-
-# List tasks by status
-task-list status="pending":
-    @echo "📋 Listing {{status}} tasks..."
-    task-master list --status={{status}}
-
-# Show task progress
-task-progress:
-    @echo "📊 Task Progress..."
-    task-master list
-
-# GitHub Actions
-# ==============
-
-# Test PR analysis bot locally
-test-pr-bot pr_number:
-    @echo "🤖 Testing PR analysis bot on PR #{{pr_number}}..."
-    cd .github/workflows && \
-    gh pr view {{pr_number}} --json number,title,body,additions,deletions,changedFiles > pr_data.json && \
-    gh pr diff {{pr_number}} > pr_diff.txt && \
-    python ../../scripts/github_action_analyzer.py
-
-# Development Helpers
-# ===================
-
-# Format Python code
-format:
-    @echo "🎨 Formatting Python code..."
-    uv run ruff format src/ scripts/ tests/
-    uv run ruff check --fix src/ scripts/ tests/
-
-# Lint Python code
+# Quality assurance commands
 lint:
-    @echo "🔍 Linting Python code..."
-    ruff check src/ scripts/ tests/
-    @echo "✅ Linting completed successfully!"
+    @echo "🔍 Running linting with ruff..."
+    @{{VENV_DIR}}/bin/python -m ruff check src/ tests/ scripts/
 
-# Type check Python code (optional - requires mypy to be added)
+format:
+    @echo "🎨 Formatting code with ruff..."
+    @{{VENV_DIR}}/bin/python -m ruff format src/ tests/ scripts/
+
 typecheck:
-    @echo "🔍 Type checking would require mypy..."
-    @echo "💡 Consider adding 'mypy>=1.0.0' to dev-dependencies for type checking"
+    @echo "🔍 Running type checking with mypy..."
+    @{{VENV_DIR}}/bin/python -m mypy src/
 
-# Run all code quality checks
-quality: format lint typecheck
-    @echo "✅ All code quality checks passed!"
+coverage:
+    @echo "📊 Generating test coverage report..."
+    @{{VENV_DIR}}/bin/python -m pytest tests/ --cov=src --cov-report=html --cov-report=term-missing
+    @echo "📈 Coverage report generated in htmlcov/"
 
-# Documentation
-# =============
+quality-check:
+    @echo "🎯 Running full quality suite..."
+    @just lint
+    @just format
+    @just typecheck
+    @just coverage
 
-# Generate documentation
-docs:
-    @echo "📚 Generating documentation..."
-    @echo "Documentation is in docs/ directory"
-    @ls -la docs/
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                          MONITORING & DEBUGGING                            ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 
-# Serve documentation locally
-docs-serve:
-    @echo "📚 Serving documentation at http://localhost:8000"
-    cd docs && python -m http.server 8000
+# Show system status and health
+status:
+    @echo "📊 System Status:"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @just env-check
+    @echo ""
+    @echo "📁 Directory Status:"
+    @ls -la {{ANALYSIS_DIR}}/ 2>/dev/null || echo "Analysis directory empty"
+    @echo ""
+    @echo "🔍 Recent Analysis Files:"
+    @ls -lt {{ANALYSIS_DIR}}/*.csv 2>/dev/null | head -5 || echo "No analysis files found"
 
-# List all documentation files
-docs-list:
-    @echo "📚 Documentation Files:"
-    @find docs -name "*.md" -type f | sort
+# Check API health and connectivity
+health:
+    @echo "🏥 Health Check:"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @just verify-apis
 
-# Create a new documentation file
-docs-new name:
-    @echo "📝 Creating new documentation: docs/{{name}}.md"
-    @touch docs/{{name}}.md
-    @echo "# {{name}}" > docs/{{name}}.md
-    @echo "" >> docs/{{name}}.md
-    @echo "## Overview" >> docs/{{name}}.md
-    @echo "" >> docs/{{name}}.md
-    @echo "TODO: Add documentation content" >> docs/{{name}}.md
-    @echo "✅ Created docs/{{name}}.md"
-
-# Utility Commands
-# ================
-
-# Clean up generated files
-clean:
-    @echo "🧹 Cleaning up..."
-    find . -type d -name "__pycache__" -exec rm -rf {} +
-    find . -type f -name "*.pyc" -delete
-    rm -f .coverage
-    rm -rf .pytest_cache
-    rm -rf .mypy_cache
-    @echo "✅ Cleanup complete"
-
-# Show repository statistics
-stats:
-    @echo "📊 Repository Statistics:"
-    @echo "Total Python files: $(find src scripts -name '*.py' | wc -l)"
-    @echo "Total lines of code: $(find src scripts -name '*.py' -exec cat {} + | wc -l)"
-    @echo "Total tests: $(find tests -name 'test_*.py' | wc -l)"
-
-# Watch for file changes and run tests
-watch:
-    @echo "👁️ Watching for changes..."
-    watchmedo shell-command \
-        --patterns="*.py" \
-        --recursive \
-        --command='clear && just test' \
-        src tests
-
-# Docker Commands (if needed later)
-# ==================================
-
-# Build Docker image
-docker-build:
-    @echo "🐳 Building Docker image..."
-    docker build -t north-star-metrics .
-
-# Run in Docker
-docker-run:
-    @echo "🐳 Running in Docker..."
-    docker run -it --rm \
-        -v $(pwd):/app \
-        -e GITHUB_TOKEN \
-        -e LINEAR_API_KEY \
-        -e ANTHROPIC_API_KEY \
-        north-star-metrics
-
-# Deployment
-# ==========
-
-# Deploy GitHub Actions workflow
-deploy-gh-actions:
-    @echo "🚀 Deploying GitHub Actions workflow..."
-    @echo "Workflow already in .github/workflows/"
-    @echo "Commit and push to deploy"
-
-# Quick Commands
-# ==============
-
-# Run the next task from TaskMaster
-next:
-    @just task-next
-
-# Start working on the next task
-start-next:
-    @task_id=$(task-master next --json | jq -r '.id' 2>/dev/null || echo ""); \
-    if [ -n "$task_id" ]; then \
-        echo "▶️ Starting task $task_id..."; \
-        task-master set-status --id=$task_id --status=in-progress; \
+# Show logs for debugging
+logs service="":
+    @echo "📋 Showing logs..."
+    @if [ -n "{{service}}" ]; then \
+        echo "Showing logs for {{service}}"; \
+        cat {{LOGS_DIR}}/{{service}}.log 2>/dev/null || echo "No logs found for {{service}}"; \
     else \
-        echo "❌ Could not determine next task ID"; \
+        find {{LOGS_DIR}} -name "*.log" -exec echo "=== {} ===" \; -exec tail -20 {} \; 2>/dev/null || echo "No log files found"; \
     fi
 
-# Quick pilot run
-quick-pilot org="my-org":
-    @just pilot {{org}}
+# Debug extraction issues
+debug-extraction:
+    @echo "🔍 Debugging extraction issues..."
+    @{{VENV_DIR}}/bin/python scripts/debug_extraction.py
 
-# Scheduling Commands
-# ===================
+# Debug analysis issues
+debug-analysis:
+    @echo "🔍 Debugging analysis issues..."
+    @{{VENV_DIR}}/bin/python scripts/debug_analysis.py
 
-# Run main pipeline with all options
-pipeline-run org mode="incremental" days="7" output="." force="false":
-    @echo "🚀 Running pipeline for {{org}} in {{mode}} mode..."
-    python main.py --org {{org}} --mode {{mode}} --days {{days}} --output-dir {{output}} {{ if force == "true" { "--force" } else { "" } }}
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                             SAFETY HELPERS                                 ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 
-# Set up scheduled analysis (copy configuration template)
-schedule-setup:
-    @echo "⚙️ Setting up scheduled analysis..."
-    @if [ ! -f config/schedule.conf ]; then \
-        cp config/schedule.conf.example config/schedule.conf; \
-        echo "✅ Created config/schedule.conf - please customize it"; \
-    else \
-        echo "⚠️ config/schedule.conf already exists"; \
-    fi
-    @echo "📝 Edit config/schedule.conf to set your organization and preferences"
+# Validate data file integrity
+validate-data file:
+    @echo "🔍 Validating data file {{file}}..."
+    @{{VENV_DIR}}/bin/python scripts/validation/check_data_quality.py {{file}}
 
-# Test scheduled analysis script
-schedule-test org="my-org":
-    @echo "🧪 Testing scheduled analysis for {{org}}..."
-    ./scripts/schedule_analysis.sh --org {{org}} --mode pilot
+# Backup analysis data
+backup-data:
+    @echo "💾 Backing up analysis data..."
+    @mkdir -p backups
+    @tar -czf backups/analysis_backup_$(date +%Y%m%d_%H%M%S).tar.gz {{ANALYSIS_DIR}}/ {{LOGS_DIR}}/
+    @echo "✅ Backup complete"
 
-# Show cron examples for scheduling
-schedule-help:
-    @echo "📅 Scheduling Examples:"
-    @echo ""
-    @echo "1. Add to crontab (crontab -e):"
-    @echo "   # Daily at 6 AM"
-    @echo "   0 6 * * * $(pwd)/scripts/schedule_analysis.sh >/dev/null 2>&1"
-    @echo ""
-    @echo "   # Monday-Friday at 8 AM"
-    @echo "   0 8 * * 1-5 $(pwd)/scripts/schedule_analysis.sh >/dev/null 2>&1"
-    @echo ""
-    @echo "2. GitHub Actions workflow:"
-    @echo "   Already configured in .github/workflows/scheduled-analysis.yml"
-    @echo "   Set GITHUB_ORG variable in repository settings"
-    @echo ""
-    @echo "3. Manual testing:"
-    @echo "   just schedule-test your-org-name"
+# Restore from backup
+restore-data:
+    @echo "🔄 Restoring from backup..."
+    @ls -lt backups/ | head -10
+    @echo "Please specify backup file to restore"
 
-# Show today's progress
-today:
-    @echo "📅 Today's Progress:"
-    @echo ""
-    @echo "Completed tasks:"
-    @task-master list --status=done --json 2>/dev/null | jq -r '.[] | select(.updated_at | startswith("'$(date +%Y-%m-%d)'")) | "  ✅ #\(.id): \(.title)"' || echo "  None today"
-    @echo ""
-    @echo "In progress:"
-    @task-master list --status=in-progress --json 2>/dev/null | jq -r '.[] | "  ▶️ #\(.id): \(.title)"' || echo "  None"
-
-# Full pipeline run
-pipeline org="my-org" days="30":
-    @echo "🚀 Running full pipeline for {{org}}..."
-    just verify-apis
-    just extract {{org}} {{days}}
-    just analyze
-    @echo "✅ Pipeline complete!"
-
-# Data Quality & Validation
-# =========================
-
-# Run comprehensive data quality checks
-validate-data file="unified_pilot_data.csv":
-    @echo "🔍 Running data quality validation on {{file}}..."
-    python scripts/validation/check_data_quality.py {{file}}
-
-# Detect anomalies and outliers in data
-detect-anomalies file="unified_pilot_data.csv" method="iqr":
-    @echo "🚨 Detecting anomalies in {{file}} using {{method}} method..."
-    python scripts/validation/detect_anomalies.py {{file}} --method {{method}}
-
-# Check data consistency across files
-check-consistency dir=".":
-    @echo "🔄 Checking data consistency in {{dir}}..."
-    python scripts/validation/check_data_consistency.py {{dir}}
-
-# Run methodology validation
-validate-methodology file="unified_pilot_data.csv" sample="20":
-    @echo "✅ Running methodology validation on {{file}}..."
-    python scripts/validation/validate_methodology.py {{file}} --sample-size {{sample}}
-
-# Run all validation checks
-validate-all file="unified_pilot_data.csv":
-    @echo "🏁 Running all validation checks on {{file}}..."
-    just validate-data {{file}}
-    just detect-anomalies {{file}}
-    just check-consistency
-    just validate-methodology {{file}}
-    @echo "✅ All validation checks complete!"
-
-# Generate validation report summary
-validation-summary:
-    @echo "📊 Validation Results Summary:"
-    @echo ""
-    @if [ -d "validation_results" ]; then \
-        echo "Recent validation reports:"; \
-        ls -lt validation_results/*.json | head -5; \
-        echo ""; \
-        echo "Run 'just validate-all' to generate fresh reports"; \
-    else \
-        echo "No validation results found. Run 'just validate-all' first."; \
-    fi
-
-# Help Commands
-# =============
-
-# Show all available environment variables
-help-env:
-    @echo "🔍 Required Environment Variables:"
-    @echo ""
-    @echo "GITHUB_TOKEN       - GitHub personal access token"
-    @echo "LINEAR_API_KEY     - Linear API key (or LINEAR_TOKEN)"
-    @echo "ANTHROPIC_API_KEY  - Anthropic API key for Claude"
-    @echo ""
-    @echo "Set these in your .env file or export them in your shell"
-
-# Show project structure
-help-structure:
-    @echo "📁 Project Structure:"
-    @tree -d -L 2 --filesfirst
-
-# Show common workflows
-help-workflows:
-    @echo "📋 Common Workflows:"
-    @echo ""
-    @echo "1. Initial Setup:"
-    @echo "   just setup"
-    @echo "   just verify-apis"
-    @echo ""
-    @echo "2. Run Pilot Analysis:"
-    @echo "   just pilot your-org-name"
-    @echo ""
-    @echo "3. Development:"
-    @echo "   just task-next"
-    @echo "   just test"
-    @echo "   just quality"
-    @echo ""
-    @echo "4. Full Pipeline:"
-    @echo "   just pipeline your-org-name 30"
+# Emergency cleanup
+emergency-cleanup:
+    @echo "🚨 Emergency cleanup..."
+    @echo "This will remove all analysis data and logs. Are you sure? (y/N)"
+    @read -r confirm && [ "$$confirm" = "y" ] || (echo "Aborted" && exit 1)
+    @rm -rf {{ANALYSIS_DIR}}/* {{LOGS_DIR}}/*
+    @echo "✅ Emergency cleanup complete"

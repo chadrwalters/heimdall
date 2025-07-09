@@ -7,6 +7,7 @@ from typing import Any
 import backoff
 from anthropic import Anthropic
 
+from ..resilience.circuit_breaker import CircuitBreakerConfig, get_circuit_breaker
 from ..security.key_manager import EnvironmentKeyManager, KeySecurityError, SecureKeyManager
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,17 @@ class ClaudeClient:
         """Initialize the Claude client with API key."""
         self.secure_manager = SecureKeyManager()
         self.env_manager = EnvironmentKeyManager(self.secure_manager)
+        
+        # Initialize circuit breaker
+        circuit_config = CircuitBreakerConfig(
+            failure_threshold=5,
+            recovery_timeout=60.0,
+            success_threshold=3,
+            timeout=30.0,
+            expected_exceptions=(Exception,),
+            ignored_exceptions=(KeyboardInterrupt, SystemExit)
+        )
+        self.circuit_breaker = get_circuit_breaker("claude-api", circuit_config)
 
         try:
             if api_key:
@@ -44,9 +56,6 @@ class ClaudeClient:
         self.total_api_calls = 0
         self.cache = {}
 
-    @backoff.on_exception(
-        backoff.expo, Exception, max_tries=MAX_RETRIES, jitter=backoff.full_jitter
-    )
     def analyze_code_change(
         self,
         prompt: str,
@@ -55,12 +64,34 @@ class ClaudeClient:
         temperature: float = DEFAULT_TEMPERATURE,
         cache_key: str | None = None,
     ) -> dict[str, Any]:
-        """Send a prompt to Claude for code analysis."""
+        """Send a prompt to Claude for code analysis with circuit breaker protection."""
         # Check cache if key provided
         if cache_key and cache_key in self.cache:
             logger.debug(f"Cache hit for key: {cache_key}")
             return self.cache[cache_key]
 
+        # Use circuit breaker to protect API call
+        return self.circuit_breaker.call(
+            self._make_api_call,
+            prompt=prompt,
+            system_prompt=system_prompt,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            cache_key=cache_key
+        )
+    
+    @backoff.on_exception(
+        backoff.expo, Exception, max_tries=MAX_RETRIES, jitter=backoff.full_jitter
+    )
+    def _make_api_call(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+        temperature: float = DEFAULT_TEMPERATURE,
+        cache_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Make the actual API call with retry logic."""
         try:
             messages = [{"role": "user", "content": prompt}]
 
@@ -168,17 +199,32 @@ class ClaudeClient:
 
     def get_usage_stats(self) -> dict[str, Any]:
         """Get usage statistics for this client session."""
-        return {
+        stats = {
             "total_api_calls": self.total_api_calls,
             "total_tokens_used": self.total_tokens_used,
             "cache_size": len(self.cache),
             "model": self.MODEL_ID,
         }
+        
+        # Add circuit breaker stats
+        circuit_stats = self.circuit_breaker.get_stats()
+        stats["circuit_breaker"] = circuit_stats
+        
+        return stats
 
     def clear_cache(self):
         """Clear the response cache."""
         self.cache.clear()
         logger.info("Cache cleared")
+    
+    def get_circuit_breaker_stats(self) -> dict[str, Any]:
+        """Get circuit breaker statistics."""
+        return self.circuit_breaker.get_stats()
+    
+    def reset_circuit_breaker(self):
+        """Manually reset the circuit breaker."""
+        self.circuit_breaker.reset()
+        logger.info("Circuit breaker reset")
 
     def estimate_cost(self, input_tokens: int = None, output_tokens: int = None) -> float:
         """Estimate cost based on token usage."""

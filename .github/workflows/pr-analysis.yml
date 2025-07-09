@@ -66,17 +66,21 @@ jobs:
           ADDITIONS=$(echo "$PR_DATA" | jq -r '.additions // 0')
           DELETIONS=$(echo "$PR_DATA" | jq -r '.deletions // 0')
           
-          # Save to environment
-          echo "PR_TITLE=$PR_TITLE" >> $GITHUB_ENV
-          echo "PR_BODY=$PR_BODY" >> $GITHUB_ENV
-          echo "PR_AUTHOR=$PR_AUTHOR" >> $GITHUB_ENV
-          echo "PR_BASE=$PR_BASE" >> $GITHUB_ENV
-          echo "PR_HEAD=$PR_HEAD" >> $GITHUB_ENV
-          echo "PR_URL=$PR_URL" >> $GITHUB_ENV
-          echo "FILES_CHANGED=$FILES_CHANGED" >> $GITHUB_ENV
-          echo "ADDITIONS=$ADDITIONS" >> $GITHUB_ENV
-          echo "DELETIONS=$DELETIONS" >> $GITHUB_ENV
-          echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
+          # Save to environment using proper escaping
+          {
+            echo "PR_TITLE=$PR_TITLE"
+            echo "PR_BODY<<EOF"
+            echo "$PR_BODY"
+            echo "EOF"
+            echo "PR_AUTHOR=$PR_AUTHOR"
+            echo "PR_BASE=$PR_BASE"
+            echo "PR_HEAD=$PR_HEAD"
+            echo "PR_URL=$PR_URL"
+            echo "FILES_CHANGED=$FILES_CHANGED"
+            echo "ADDITIONS=$ADDITIONS"
+            echo "DELETIONS=$DELETIONS"
+            echo "PR_NUMBER=$PR_NUMBER"
+          } >> $GITHUB_ENV
           
           # Save PR data for analysis script
           echo "$PR_DATA" > pr_data.json

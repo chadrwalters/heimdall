@@ -54,3 +54,4 @@ developer_metrics.csv
 .ruff_cache/
 .pytest_cache/
 htmlcov/
+.history/

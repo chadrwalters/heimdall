@@ -9,7 +9,7 @@
 
 ## 🎯 PROJECT OVERVIEW
 
-**North Star Metrics** is a comprehensive framework for tracking and analyzing engineering impact across organizations. It provides data-driven visibility into development work by analyzing commits and pull requests using AI to classify work types and measure impact.
+**North Star Metrics** is a comprehensive framework for tracking and analyzing engineering impact across organizations. It provides data-driven visibility into development work by analyzing commits and pull requests using AI to classify work types and measure impact
 
 ### Core Capabilities
 - **Multi-Repository Analysis**: Analyzes ALL active repositories in an organization

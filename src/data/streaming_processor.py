@@ -8,8 +8,8 @@ import pandas as pd
 
 from ..config.constants import get_settings
 from ..exceptions import (
-    CSVProcessingError,
     FileProcessingError,
+    InvalidDataFormatError,
 )
 
 logger = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ class StreamingCSVProcessor:
             logger.warning(f"Empty CSV file: {file_path}")
             return
         except pd.errors.ParserError as e:
-            raise CSVProcessingError(
+            raise InvalidDataFormatError(
                 f"Invalid CSV format in {file_path}: {e}", file_path=str(file_path)
             )
         except MemoryError as e:
@@ -121,14 +121,14 @@ class StreamingCSVProcessor:
                     if progress_callback:
                         progress_callback(chunk_num + 1, len(chunk))
 
-                except (CSVProcessingError, FileProcessingError):
+                except (InvalidDataFormatError, FileProcessingError):
                     # Re-raise specific processing errors
                     raise
                 except Exception as e:
                     logger.error(f"Error processing chunk {chunk_num}: {e}")
                     continue
 
-        except (CSVProcessingError, FileProcessingError):
+        except (InvalidDataFormatError, FileProcessingError):
             # Re-raise specific processing errors
             raise
         except Exception as e:
@@ -164,7 +164,7 @@ class StreamingCSVProcessor:
             logger.debug(f"Estimated {estimated_rows} rows in {file_path}")
             return estimated_rows
 
-        except (CSVProcessingError, FileProcessingError) as e:
+        except (InvalidDataFormatError, FileProcessingError) as e:
             logger.warning(f"Could not estimate row count for {file_path}: {e}")
             return -1
         except Exception as e:
@@ -191,7 +191,7 @@ class StreamingCSVProcessor:
                 "sample_row_count": len(first_chunk),
             }
 
-        except (CSVProcessingError, FileProcessingError) as e:
+        except (InvalidDataFormatError, FileProcessingError) as e:
             logger.error(f"Could not get column info for {file_path}: {e}")
             return {}
         except Exception as e:
@@ -226,7 +226,7 @@ class StreamingCSVProcessor:
             logger.debug(f"CSV structure validated for {file_path}: {len(columns)} columns")
             return True
 
-        except (CSVProcessingError, FileProcessingError) as e:
+        except (InvalidDataFormatError, FileProcessingError) as e:
             logger.error(f"CSV structure validation failed for {file_path}: {e}")
             return False
         except Exception as e:

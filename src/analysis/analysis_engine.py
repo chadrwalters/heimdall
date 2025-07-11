@@ -59,6 +59,10 @@ class AnalysisEngine:
                 maxsize=cache_size, ttl=settings.processing_limits.cache_ttl_seconds
             )
 
+            # Cache metrics
+            self.cache_hits = 0
+            self.cache_misses = 0
+
             # Register cache cleanup with memory manager
             self.memory_manager.register_cleanup_callback(self.clear_cache)
 
@@ -80,19 +84,44 @@ class AnalysisEngine:
 
     def _check_memory_usage(self) -> None:
         """Check memory usage using enhanced memory manager."""
-        stats = self.memory_manager.get_memory_stats()
-        pressure = self.memory_manager.get_memory_pressure_level()
-
-        if pressure == "warning":
-            logger.warning(
-                f"Memory pressure: {stats.percent_used:.1%} "
-                f"({stats.used_mb:.1f}MB used, {stats.available_mb:.1f}MB available)"
-            )
-        elif pressure == "critical":
-            logger.critical(
-                f"Critical memory pressure: {stats.percent_used:.1%} "
-                f"({stats.used_mb:.1f}MB used, {stats.available_mb:.1f}MB available)"
-            )
+        try:
+            stats = self.memory_manager.get_memory_stats()
+            pressure = self.memory_manager.get_memory_pressure_level()
+            
+            if pressure == "warning":
+                logger.warning(
+                    f"Memory pressure: {stats.percent_used:.1%} "
+                    f"({stats.used_mb:.1f}MB used, {stats.available_mb:.1f}MB available)"
+                )
+            elif pressure == "critical":
+                logger.critical(
+                    f"Critical memory pressure: {stats.percent_used:.1%} "
+                    f"({stats.used_mb:.1f}MB used, {stats.available_mb:.1f}MB available)"
+                )
+                # Clear cache if memory is critically high
+                self.clear_cache()
+        except Exception as e:
+            logger.warning(f"Memory monitoring failed, falling back to basic monitoring: {e}")
+            # Fallback to basic psutil monitoring
+            try:
+                import psutil
+                memory_info = psutil.virtual_memory()
+                memory_percent = memory_info.percent / 100
+                settings = get_settings()
+                
+                if memory_percent > settings.processing_limits.memory_warning_threshold:
+                    logger.warning(
+                        f"High memory usage: {memory_percent:.1%}. "
+                        f"Consider reducing batch size or cache size."
+                    )
+                    
+                    # Clear cache if critically high
+                    critical_threshold = min(settings.processing_limits.memory_warning_threshold + 0.1, 0.95)
+                    if memory_percent > critical_threshold:
+                        logger.warning(f"Memory critically high ({memory_percent:.1%}) - clearing cache")
+                        self.clear_cache()
+            except Exception as fallback_e:
+                logger.debug(f"Fallback memory monitoring also failed: {fallback_e}")
 
     def _get_memory_stats(self) -> dict[str, Any]:
         """Get current memory statistics."""
@@ -141,7 +170,11 @@ class AnalysisEngine:
         # Check cache
         if use_cache and context.cache_key in self.results_cache:
             logger.debug(f"Using cached result for PR {context.metadata.get('pr_id')}")
+            self.cache_hits += 1
             return self.results_cache[context.cache_key]
+        
+        if use_cache:
+            self.cache_misses += 1
 
         # Create prompt
         prompt = self.prompt_engineer.create_analysis_prompt(
@@ -276,7 +309,11 @@ class AnalysisEngine:
         # Check cache
         if use_cache and context.cache_key in self.results_cache:
             logger.debug(f"Using cached result for commit {context.metadata.get('commit_sha')}")
+            self.cache_hits += 1
             return self.results_cache[context.cache_key]
+        
+        if use_cache:
+            self.cache_misses += 1
 
         # Create prompt
         prompt = self.prompt_engineer.create_analysis_prompt(
@@ -484,7 +521,10 @@ class AnalysisEngine:
     def get_stats(self) -> dict[str, Any]:
         """Get analysis statistics including memory usage."""
         stats = self.claude_client.get_usage_stats()
-        stats["cache_hits"] = len(self.results_cache)
+        stats["cache_hits"] = self.cache_hits
+        stats["cache_misses"] = self.cache_misses
+        stats["cache_hit_rate"] = self.cache_hits / (self.cache_hits + self.cache_misses) if (self.cache_hits + self.cache_misses) > 0 else 0
+        stats["cache_size"] = len(self.results_cache)
         stats["cache_maxsize"] = self.results_cache.maxsize
         stats["estimated_cost"] = self.claude_client.estimate_cost()
         stats["memory_stats"] = self._get_memory_stats()
@@ -496,7 +536,11 @@ class AnalysisEngine:
         # Check cache
         if use_cache and context.cache_key in self.results_cache:
             logger.debug(f"Using cached result for context {context.cache_key}")
+            self.cache_hits += 1
             return self.results_cache[context.cache_key]
+        
+        if use_cache:
+            self.cache_misses += 1
 
         # Create prompt
         prompt = self.prompt_engineer.create_analysis_prompt(
@@ -508,8 +552,8 @@ class AnalysisEngine:
 
         # Get analysis
         try:
-            response = self.claude_client.analyze(prompt)
-            result = self.prompt_engineer.parse_response(response["response"])
+            response = self.claude_client.analyze_code_change(prompt)
+            result = self.prompt_engineer.parse_response(response["content"])
 
             # Cache result
             if use_cache:

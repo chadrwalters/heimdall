@@ -60,7 +60,7 @@ class ContextPreparer:
 
         # Generate cache key
         cache_content = f"{pr_id}:{title}:{len(prepared_diff)}"
-        cache_key = hashlib.md5(cache_content.encode()).hexdigest()
+        cache_key = hashlib.sha256(cache_content.encode()).hexdigest()
 
         # Collect metadata
         metadata = {
@@ -109,7 +109,7 @@ class ContextPreparer:
             prepared_diff = ContextPreparer._prepare_diff(prepared_diff, file_changes)
 
         # Generate cache key
-        cache_key = hashlib.md5(sha.encode()).hexdigest()
+        cache_key = hashlib.sha256(sha.encode()).hexdigest()
 
         # Collect metadata
         metadata = {

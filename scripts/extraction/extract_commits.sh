@@ -35,7 +35,7 @@ extract_co_authors() {
                        sed 's/Co-authored-by: //' | tr '\n' ';')
     
     # Remove trailing semicolon
-    echo "${co_authors%;}""
+    echo "${co_authors%;}"
 }
 
 # Function to check if AI tool was used (simple pattern matching)
@@ -65,31 +65,56 @@ fetch_repo_commits() {
     while true; do
         show_progress $page 10 "Fetching commits page $page..."
         
-        # Fetch commits using GitHub API
-        local commits=$(gh api \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "/repos/${GITHUB_ORG}/${repo}/commits?since=${start_date}&until=${end_date}&per_page=${per_page}&page=${page}" 2>&1)
+        # Check cache for this page
+        local cache_file=$(get_cache_path "commits" "${repo}_page_${page}")
+        local cached_data=$(get_cached_data "$cache_file" 86400)  # 24 hours TTL
         
-        # Check for rate limit
-        if echo "$commits" | grep -q "rate limit"; then
-            handle_rate_limit 0 || continue
-        fi
+        if [ $? -eq 0 ]; then
+            echo " (cached)"
+            local commits="$cached_data"
+        else
+            # Fetch commits using GitHub API
+            local commits=$(gh api \
+                -H "Accept: application/vnd.github+json" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                "/repos/${GITHUB_ORG}/${repo}/commits?since=${start_date}&until=${end_date}&per_page=${per_page}&page=${page}" 2>&1)
         
-        # Check for errors
-        if echo "$commits" | grep -q "Not Found"; then
-            echo "Warning: Repository $repo not found or no access" >&2
-            break
-        fi
-        
-        if echo "$commits" | grep -qE "error|Error"; then
-            echo "Error fetching commits for $repo: $commits" >&2
-            break
+            # Check for rate limit
+            if echo "$commits" | grep -q "rate limit"; then
+                handle_rate_limit 0 || continue
+            fi
+            
+            # Check for errors
+            if echo "$commits" | grep -q "Not Found"; then
+                echo "Warning: Repository $repo not found or no access" >&2
+                break
+            fi
+            
+            # Check for empty repository
+            if echo "$commits" | grep -q "Git Repository is empty"; then
+                echo "Info: Repository $repo is empty, skipping..." >&2
+                break
+            fi
+            
+            # Check for other errors but avoid false positives from valid JSON
+            if echo "$commits" | grep -qE "^Error|HTTP [45][0-9][0-9]|\"message\".*\"error\""; then
+                echo "Error fetching commits for $repo: $commits" >&2
+                break
+            fi
+            
+            # Validate JSON before processing
+            if ! echo "$commits" | jq empty 2>/dev/null; then
+                echo "Warning: Invalid JSON response for $repo, skipping..." >&2
+                break
+            fi
+            
+            # Cache the commits for this page
+            cache_response "$cache_file" "$commits" 86400
         fi
         
         # Check if we got any commits
         local commit_count=$(echo "$commits" | jq 'length' 2>/dev/null || echo "0")
-        if [ "$commit_count" -eq 0 ]; then
+        if [ -z "$commit_count" ] || [ "$commit_count" -eq 0 ] 2>/dev/null; then
             break
         fi
         
@@ -107,9 +132,9 @@ fetch_repo_commits() {
             local url=$(echo "$commit" | jq -r '.html_url // ""')
             
             # Check if it's a merge commit
-            local parent_count=$(echo "$commit" | jq '.parents | length')
+            local parent_count=$(echo "$commit" | jq '.parents | length' 2>/dev/null || echo "0")
             local is_merge="false"
-            if [ "$parent_count" -gt 1 ]; then
+            if [ -n "$parent_count" ] && [ "$parent_count" -gt 1 ] 2>/dev/null; then
                 is_merge="true"
             fi
             
@@ -145,7 +170,7 @@ fetch_repo_commits() {
         done
         
         # Check if there are more pages
-        if [ "$commit_count" -lt "$per_page" ]; then
+        if [ -z "$commit_count" ] || [ "$commit_count" -lt "$per_page" ] 2>/dev/null; then
             break
         fi
         

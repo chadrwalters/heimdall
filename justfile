@@ -255,7 +255,7 @@ pilot org:
     @echo "📊 Extracting data..."
     @just extract {{org}} 7
     @echo "🧠 Running analysis..."
-    @just analyze
+    @just analyze {{org}}
     @echo "📈 Generating reports..."
     @just generate-reports
     @echo "✅ Pilot analysis complete for {{org}}"
@@ -269,21 +269,21 @@ pipeline org days:
     @echo "📊 Extracting data..."
     @just extract {{org}} {{days}}
     @echo "🧠 Running analysis..."
-    @just analyze
+    @just analyze {{org}}
     @echo "📈 Generating reports..."
     @just generate-reports
     @echo "✅ Pipeline complete for {{org}}"
 
 # Analyze extracted data
-analyze input="org_prs.csv":
+analyze org input="org_prs.csv":
     @echo "🧠 Running AI analysis on {{input}}..."
     @if [ ! -f "{{input}}" ]; then echo "❌ Input file {{input}} not found"; exit 1; fi
-    @{{VENV_DIR}}/bin/python main.py --input {{input}}
+    @{{VENV_DIR}}/bin/python main.py --org {{org}} --input {{input}}
 
 # Re-run analysis on existing data
-reanalyze input:
+reanalyze org input:
     @echo "🔄 Re-running analysis on {{input}}..."
-    @just analyze {{input}}
+    @just analyze {{org}} {{input}}
 
 # Generate comprehensive reports
 generate-reports input="analysis_results.csv":
@@ -445,6 +445,60 @@ debug-extraction:
 debug-analysis:
     @echo "🔍 Debugging analysis issues..."
     @{{VENV_DIR}}/bin/python scripts/debug_analysis.py
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                             CACHE MANAGEMENT                               ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+# Show cache statistics
+cache-status:
+    @echo "📊 Cache Status:"
+    @if [ -d ".cache" ]; then \
+        echo "  Directory: .cache/"; \
+        echo "  $(find .cache -name '*.json' | wc -l | tr -d ' ') cache files"; \
+        echo "  $(du -sh .cache 2>/dev/null | cut -f1 || echo '0B') total size"; \
+        echo ""; \
+        echo "📁 Cache structure:"; \
+        find .cache -type f -name '*.json' | head -10 | sed 's/^/  /'; \
+        if [ $(find .cache -name '*.json' | wc -l | tr -d ' ') -gt 10 ]; then \
+            echo "  ... and $(( $(find .cache -name '*.json' | wc -l | tr -d ' ') - 10 )) more files"; \
+        fi; \
+    else \
+        echo "  No cache directory found"; \
+    fi
+
+# Clean expired cache entries
+cache-clean:
+    @echo "🧹 Cleaning expired cache entries..."
+    @if [ -d ".cache" ]; then \
+        cd scripts/extraction && source utils.sh && clean_cache; \
+    else \
+        echo "No cache directory found"; \
+    fi
+
+# Validate cache integrity
+cache-validate:
+    @echo "🔍 Validating cache integrity..."
+    @if [ -d ".cache" ]; then \
+        echo "Checking cache files..."; \
+        find .cache -name '*.json' -exec sh -c 'echo "Validating: $$1"; jq . "$$1" >/dev/null 2>&1 || echo "❌ Invalid JSON: $$1"' _ {} \; | tail -20; \
+    else \
+        echo "No cache directory found"; \
+    fi
+
+# Force rebuild cache (clears all cached data)
+cache-rebuild:
+    @echo "🔄 Rebuilding cache (clearing all cached data)..."
+    @echo "This will remove all cached data. Continue? (y/N)"
+    @read -r confirm && [ "$$confirm" = "y" ] || (echo "Aborted" && exit 1)
+    @rm -rf .cache/
+    @mkdir -p .cache/{repos,prs,commits}
+    @echo "✅ Cache cleared and rebuilt"
+
+# Warm cache for upcoming analysis
+cache-warm organization days="7":
+    @echo "🔥 Warming cache for {{ organization }} (last {{ days }} days)..."
+    @python -c "from src.analysis.analysis_engine import AnalysisEngine; from src.analysis.cache_warmer import CacheWarmer; engine = AnalysisEngine(); warmer = CacheWarmer(engine); results = warmer.warm_recent_prs('{{ organization }}', days={{ days }}); print(f'✅ Warmed {results[\"warmed_count\"]} entries'); print(f'📊 Already cached: {results[\"already_cached\"]}'); print(f'📦 Total cache size: {results[\"cache_size\"]}'); stats = warmer.get_warming_stats(); print(f'📈 Cache hit rate: {stats[\"cache_hit_rate\"]:.1%}')"
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                             SAFETY HELPERS                                 ║

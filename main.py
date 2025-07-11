@@ -359,8 +359,7 @@ def execute_pipeline(
         analysis_engine = AnalysisEngine(max_workers=max_workers)
         unified_processor = UnifiedDataProcessor(
             analysis_engine=analysis_engine,
-            state_manager=state_manager,
-            config_manager=config_manager
+            state_manager=state_manager
         )
         
         # Step 3: Process PR data with error recovery
@@ -378,9 +377,13 @@ def execute_pipeline(
             
             if not pr_results:
                 try:
-                    pr_results = unified_processor.process_prs(
-                        str(pr_file), skip_processed=(not force)
+                    records_processed = unified_processor.process_unified_data(
+                        pr_data_file=str(pr_file),
+                        commit_data_file="org_commits.csv",
+                        output_file="unified_pilot_data.csv",
+                        incremental=(not force)
                     )
+                    pr_results = f"Processed {records_processed} records"
                     # Save checkpoint after successful processing
                     save_progress_checkpoint(pr_results, "prs", output_dir, logger)
                 except Exception as e:

@@ -3,8 +3,7 @@
 import json
 import os
 import tempfile
-import subprocess
-from unittest.mock import patch, MagicMock
+
 import pytest
 
 

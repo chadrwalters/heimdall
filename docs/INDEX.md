@@ -80,6 +80,10 @@ docs/
 - **[Linear Integration Summary](./linear-integration-summary.md)** - Linear API integration and ticket correlation
 - **[AI Detection Methodology](./ai-detection-methodology.md)** - How AI-generated code is detected and classified
 
+### Git-Based Workflows
+- **[Git Extraction Workflow](./workflows/git-extraction-workflow.md)** - Git-based extraction procedures ⭐
+- **[Git Cache Troubleshooting](./troubleshooting/git-cache-issues.md)** - Git cache management and issues ⭐
+
 ### Analysis Outputs
 - **[Understanding Results](./workflows/understanding-results.md)** - Interpreting analysis outputs and metrics
 - **[Impact Scoring](./workflows/impact-scoring.md)** - How complexity, risk, and clarity are calculated
@@ -93,7 +97,8 @@ docs/
 **Focus**: System design, technical architecture, and integration patterns
 
 ### System Architecture
-- **[Architecture Overview](./architecture/system-architecture.md)** - High-level system design and components
+- **[Architecture Overview](./architecture/system-architecture.md)** - High-level system design and components ⭐
+- **[Git-Based Extraction](./architecture/git-based-extraction.md)** - Revolutionary git-based approach (85-90% API reduction) ⭐
 - **[Data Flow](./architecture/data-flow.md)** - How data moves through the analysis pipeline
 - **[API Integration](./architecture/api-integration.md)** - GitHub, Linear, and Anthropic API patterns
 
@@ -161,15 +166,23 @@ docs/
 ### Daily Analysis Workflow
 ```bash
 just env-check              # Verify environment
-just pilot organization     # Run 7-day pilot analysis
+just pilot organization     # Run 7-day pilot analysis (git-based)
 just analyze results.csv    # Process and interpret results
 ```
 
 ### Full Pipeline Analysis
 ```bash
 just verify-apis            # Test API connectivity
-just pipeline org 30       # Extract and analyze 30 days
+just pipeline org 30       # Extract and analyze 30 days (git-based)
 just generate-reports       # Create comprehensive reports
+```
+
+### Git Cache Management
+```bash
+just cache-status           # Check git and API cache status
+just git-status             # Check git repository health
+just git-refresh org        # Force refresh git repositories
+just extract-stats org      # Show extraction performance statistics
 ```
 
 ### Troubleshooting Workflow

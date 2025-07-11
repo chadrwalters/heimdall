@@ -1,11 +1,9 @@
 """Tests for extraction script caching functionality."""
 
-import json
 import os
 import tempfile
-from unittest.mock import patch, MagicMock, call
+
 import pytest
-from datetime import datetime, timedelta
 
 
 class TestExtractionScriptCaching:

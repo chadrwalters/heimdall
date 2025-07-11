@@ -120,6 +120,14 @@ help:
     @echo "    backup-data           Backup analysis data"
     @echo "    restore-data          Restore from backup"
     @echo ""
+    @echo "  Git Cache Management:"
+    @echo "    git-status            Show git repository health and status"
+    @echo "    git-cleanup <org>     Clean git cache for specific organization"
+    @echo "    git-refresh <org>     Force refresh git repositories"
+    @echo "    cache-status          Show detailed cache statistics"
+    @echo "    cache-clean           Clean expired API cache entries"
+    @echo "    cache-rebuild         Rebuild all caches (nuclear option)"
+    @echo ""
     @echo "📈 ADVANCED OPERATIONS:"
     @echo "  Automation:"
     @echo "    schedule-analysis <org>    Setup scheduled analysis"
@@ -127,6 +135,8 @@ help:
     @echo "    update-github-actions     Update GitHub Actions workflows"
     @echo ""
     @echo "  Performance:"
+    @echo "    extract-stats <org>       Show extraction performance statistics"
+    @echo "    benchmark-extraction <org> Benchmark git vs API extraction"
     @echo "    benchmark <org>           Benchmark analysis performance"
     @echo "    profile-analysis <input>  Profile analysis performance"
     @echo "    optimize-extraction       Optimize extraction performance"
@@ -225,40 +235,43 @@ fresh-start:
 # ║                        DATA EXTRACTION & ANALYSIS                          ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
-# Extract data for organization with safety checks
+# Extract data for organization using git-based approach
 extract org days="7":
-    @echo "📊 Extracting data for {{org}} (last {{days}} days)..."
+    @echo "📊 Extracting data for {{org}} (last {{days}} days) using git-based approach..."
     @if [ {{days}} -gt 90 ]; then echo "⚠️ Large extraction ({{days}} days) - this may take a while"; fi
     @{{VENV_DIR}}/bin/python -c "import sys; sys.exit(0 if '{{org}}' and len('{{org}}') > 0 else 1)" || (echo "❌ Organization name required" && exit 1)
-    @./scripts/extraction/run_extraction.sh --org {{org}} --days {{days}}
+    @{{VENV_DIR}}/bin/python scripts/extraction/extract_git.py --org {{org}} --days {{days}}
 
-# Run incremental extraction
+# Run incremental extraction (automatically handled by git-based approach)
 extract-incremental org:
     @echo "📊 Running incremental extraction for {{org}}..."
-    @./scripts/extraction/run_extraction.sh --org {{org}} --incremental
+    @echo "ℹ️ Git-based extraction automatically handles incremental updates"
+    @{{VENV_DIR}}/bin/python scripts/extraction/extract_git.py --org {{org}} --days 1
 
 # List all repositories for organization
 list-repos org:
     @echo "📋 Listing repositories for {{org}}..."
-    @./scripts/extraction/list_repos.sh {{org}}
+    @{{VENV_DIR}}/bin/python -c "import os, sys; sys.path.insert(0, 'src'); from git.git_extractor import GitDataExtractor; extractor = GitDataExtractor(os.getenv('GITHUB_TOKEN')); repos = extractor.get_organization_repos('{{org}}'); [print(f'{repo[\"name\"]} - {repo[\"description\"] or \"No description\"}') for repo in repos]"
 
 # Extract data for specific repository
 extract-repo repo days="7":
     @echo "📊 Extracting data for repository {{repo}} (last {{days}} days)..."
-    @./scripts/extraction/run_extraction.sh --repo {{repo}} --days {{days}}
+    @echo "ℹ️ Single repo extraction: specify as org/repo format"
+    @{{VENV_DIR}}/bin/python -c "org, repo_name = '{{repo}}'.split('/'); print(f'Extracting {org}/{repo_name}...')"
+    @{{VENV_DIR}}/bin/python scripts/extraction/extract_git.py --org $(echo "{{repo}}" | cut -d'/' -f1) --days {{days}}
 
 # Run 7-day pilot analysis with comprehensive checks
 pilot org:
     @echo "🚀 Running 7-day pilot analysis for {{org}}..."
     @echo "🔍 Pre-flight checks..."
     @just verify-apis
-    @echo "📊 Extracting data..."
+    @echo "📊 Extracting data (git-based)..."
     @just extract {{org}} 7
     @echo "🧠 Running analysis..."
     @just analyze {{org}}
     @echo "📈 Generating reports..."
     @just generate-reports
-    @echo "✅ Pilot analysis complete for {{org}}"
+    @echo "✅ Pilot analysis complete for {{org}} (git-based extraction used)"
 
 # Full pipeline analysis
 pipeline org days:
@@ -266,13 +279,13 @@ pipeline org days:
     @if [ {{days}} -gt 60 ]; then echo "⚠️ Large pipeline ({{days}} days) - this may take significant time"; fi
     @echo "🔍 Pre-flight checks..."
     @just verify-apis
-    @echo "📊 Extracting data..."
+    @echo "📊 Extracting data (git-based)..."
     @just extract {{org}} {{days}}
     @echo "🧠 Running analysis..."
     @just analyze {{org}}
     @echo "📈 Generating reports..."
     @just generate-reports
-    @echo "✅ Pipeline complete for {{org}}"
+    @echo "✅ Pipeline complete for {{org}} (git-based extraction used)"
 
 # Analyze extracted data
 analyze org input="org_prs.csv":
@@ -450,31 +463,78 @@ debug-analysis:
 # ║                             CACHE MANAGEMENT                               ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
-# Show cache statistics
+# Git repository health check and status
+git-status:
+    @echo "🔍 Git Repository Health Check:"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @{{VENV_DIR}}/bin/python -c "import sys; sys.path.insert(0, 'src'); from git.repository_service import GitRepositoryService; import os; service = GitRepositoryService(); print('📊 Repository Status:'); stats = service.get_repository_health(); print(f'  Total repositories: {stats[\"total_repos\"]}'); print(f'  Healthy repositories: {stats[\"healthy_repos\"]}'); print(f'  Corrupted repositories: {stats[\"corrupted_repos\"]}'); print(f'  Last updated: {stats[\"last_updated\"]}'); print(f'  Total disk usage: {stats[\"disk_usage\"]}'); print('\n📋 Organizations:'); [print(f'  {org}: {len(repos)} repos') for org, repos in stats[\"organizations\"].items()]; print('\n🚨 Issues:'); [print(f'  ❌ {issue}') for issue in stats[\"issues\"]] if stats[\"issues\"] else print('  ✅ No issues detected')" 2>/dev/null || echo "  (Run 'just setup' to get git repository status)"
+
+# Clean git repositories for specific organization
+git-cleanup org="":
+    @echo "🧹 Git Cache Cleanup..."
+    @if [ -z "{{org}}" ]; then \
+        echo "❌ Organization name required"; \
+        echo "Usage: just git-cleanup organization-name"; \
+        exit 1; \
+    fi
+    @echo "This will remove all cached repositories for {{org}}. Continue? (y/N)"
+    @read -r confirm && [ "$$confirm" = "y" ] || (echo "Aborted" && exit 1)
+    @rm -rf .git_cache/repos/{{org}}/
+    @rm -rf .git_cache/state/{{org}}_*.json
+    @echo "✅ Git cache cleaned for {{org}}"
+    @echo "ℹ️ Repositories will be re-cloned on next extraction"
+
+# Force refresh git repositories for organization
+git-refresh org:
+    @echo "🔄 Refreshing git repositories for {{org}}..."
+    @{{VENV_DIR}}/bin/python -c "import sys; sys.path.insert(0, 'src'); from git.repository_service import GitRepositoryService; import os; service = GitRepositoryService(); result = service.refresh_organization_repos('{{org}}', os.getenv('GITHUB_TOKEN')); print(f'✅ Refreshed {result[\"updated_repos\"]} repositories'); print(f'📊 Total repos: {result[\"total_repos\"]}'); print(f'⏱️ Update time: {result[\"update_time\"]:.2f}s'); [print(f'  ❌ Failed: {repo} - {error}') for repo, error in result[\"failures\"].items()] if result[\"failures\"] else print('  ✅ All repositories updated successfully')" 2>/dev/null || echo "❌ Failed to refresh repositories (run 'just setup' first)"
+
+# Show extraction performance statistics
+extract-stats org:
+    @echo "📊 Extraction Performance Statistics for {{org}}:"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @{{VENV_DIR}}/bin/python -c "import sys; sys.path.insert(0, 'src'); from git.git_extractor import GitDataExtractor; import os; extractor = GitDataExtractor(os.getenv('GITHUB_TOKEN')); stats = extractor.get_extraction_stats('{{org}}'); print(f'🔢 API Efficiency:'); print(f'  API calls made: {stats[\"api_calls_made\"]}'); print(f'  API calls avoided: {stats[\"api_calls_avoided\"]}'); print(f'  Efficiency: {stats[\"efficiency_percent\"]:.1f}% reduction'); print(f'\n⏱️ Performance:'); print(f'  Last extraction time: {stats[\"last_extraction_time\"]:.2f}s'); print(f'  Average time per repo: {stats[\"avg_time_per_repo\"]:.2f}s'); print(f'  Cache hit rate: {stats[\"cache_hit_rate\"]:.1f}%'); print(f'\n📦 Data Volume:'); print(f'  Repositories processed: {stats[\"repos_processed\"]}'); print(f'  Commits extracted: {stats[\"commits_extracted\"]}'); print(f'  PRs analyzed: {stats[\"prs_analyzed\"]}'); print(f'  Data freshness: {stats[\"data_freshness\"]}')" 2>/dev/null || echo "❌ No extraction statistics available for {{org}}"
+
+# Benchmark git-based vs traditional extraction
+benchmark-extraction org:
+    @echo "⚡ Benchmarking Extraction Performance for {{org}}:"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @{{VENV_DIR}}/bin/python -c "import sys; sys.path.insert(0, 'src'); from git.git_extractor import GitDataExtractor; import os, time; extractor = GitDataExtractor(os.getenv('GITHUB_TOKEN')); print('🚀 Running extraction benchmark...'); start_time = time.time(); result = extractor.benchmark_extraction('{{org}}', days=7); end_time = time.time(); print(f'\n📊 Benchmark Results:'); print(f'  Git-based extraction: {result[\"git_time\"]:.2f}s'); print(f'  Traditional API calls: {result[\"estimated_api_time\"]:.2f}s (estimated)'); print(f'  Performance improvement: {result[\"improvement_factor\"]:.1f}x faster'); print(f'  API calls saved: {result[\"api_calls_saved\"]}'); print(f'  Cost savings: {result[\"cost_savings_percent\"]:.1f}%'); print(f'\n💾 Storage Analysis:'); print(f'  Cache size: {result[\"cache_size_mb\"]:.1f} MB'); print(f'  Storage per repo: {result[\"storage_per_repo_mb\"]:.2f} MB'); print(f'  Break-even analysis: {result[\"break_even_extractions\"]} extractions')" 2>/dev/null || echo "❌ Benchmark failed (ensure git cache is initialized)"
+
+# Show cache statistics (including git cache)
 cache-status:
     @echo "📊 Cache Status:"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     @if [ -d ".cache" ]; then \
-        echo "  Directory: .cache/"; \
+        echo "📁 API Cache (.cache/):"; \
         echo "  $(find .cache -name '*.json' | wc -l | tr -d ' ') cache files"; \
         echo "  $(du -sh .cache 2>/dev/null | cut -f1 || echo '0B') total size"; \
-        echo ""; \
-        echo "📁 Cache structure:"; \
-        find .cache -type f -name '*.json' | head -10 | sed 's/^/  /'; \
-        if [ $(find .cache -name '*.json' | wc -l | tr -d ' ') -gt 10 ]; then \
-            echo "  ... and $(( $(find .cache -name '*.json' | wc -l | tr -d ' ') - 10 )) more files"; \
-        fi; \
     else \
-        echo "  No cache directory found"; \
+        echo "📁 API Cache (.cache/): No cache directory found"; \
     fi
+    @echo ""
+    @if [ -d ".git_cache" ]; then \
+        echo "📁 Git Cache (.git_cache/):"; \
+        echo "  $(find .git_cache/repos -type d -name '.git' | wc -l | tr -d ' ') repositories cloned"; \
+        echo "  $(du -sh .git_cache 2>/dev/null | cut -f1 || echo '0B') total size"; \
+        echo "  $(find .git_cache/repos -maxdepth 2 -type d | grep -v '^\\.git_cache/repos$$' | wc -l | tr -d ' ') organizations"; \
+    else \
+        echo "📁 Git Cache (.git_cache/): No git cache directory found"; \
+    fi
+    @echo ""
+    @{{VENV_DIR}}/bin/python -c "import sys; sys.path.insert(0, 'src'); from git.git_extractor import GitDataExtractor; import os; extractor = GitDataExtractor(os.getenv('GITHUB_TOKEN', 'dummy')); stats = extractor.get_cache_stats(); print(f'📊 Git Cache Details:'); print(f'  Total repositories: {stats[\"total_repos\"]}'); print(f'  Total size: {stats[\"total_size_bytes\"]/1024/1024:.1f} MB'); [print(f'  {org}: {len(repos)} repos') for org, repos in stats[\"organizations\"].items()]" 2>/dev/null || echo "  (Run 'just setup' to get detailed git cache stats)"
 
-# Clean expired cache entries
+# Clean expired cache entries (API and git cache)
 cache-clean:
     @echo "🧹 Cleaning expired cache entries..."
     @if [ -d ".cache" ]; then \
+        echo "Cleaning API cache..."; \
         cd scripts/extraction && source utils.sh && clean_cache; \
     else \
-        echo "No cache directory found"; \
+        echo "No API cache directory found"; \
     fi
+    @echo "ℹ️ Git cache (.git_cache) is managed automatically"
+    @echo "   Use 'just cache-rebuild' to force clean git cache"
 
 # Validate cache integrity
 cache-validate:
@@ -486,14 +546,15 @@ cache-validate:
         echo "No cache directory found"; \
     fi
 
-# Force rebuild cache (clears all cached data)
+# Force rebuild cache (clears all cached data including git cache)
 cache-rebuild:
     @echo "🔄 Rebuilding cache (clearing all cached data)..."
-    @echo "This will remove all cached data. Continue? (y/N)"
+    @echo "This will remove ALL cached data including git repositories. Continue? (y/N)"
     @read -r confirm && [ "$$confirm" = "y" ] || (echo "Aborted" && exit 1)
-    @rm -rf .cache/
+    @rm -rf .cache/ .git_cache/
     @mkdir -p .cache/{repos,prs,commits}
-    @echo "✅ Cache cleared and rebuilt"
+    @mkdir -p .git_cache/{repos,state}
+    @echo "✅ All caches cleared and rebuilt"
 
 # Warm cache for upcoming analysis
 cache-warm organization days="7":

@@ -3,9 +3,9 @@
 import json
 import os
 import tempfile
-from unittest.mock import patch, MagicMock
-import pytest
 from datetime import datetime, timedelta
+
+import pytest
 
 
 class TestCacheUtilities:

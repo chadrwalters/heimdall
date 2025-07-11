@@ -15,9 +15,15 @@ Get the North Star Metrics framework running in under 15 minutes with this strea
 git clone https://github.com/your-org/github_linear_metrics.git
 cd github_linear_metrics
 
-# Setup Python environment
+# Setup Python environment and dependencies (includes GitPython)
 just setup
 ```
+
+**What this installs:**
+- Python virtual environment (`.venv/`)
+- Core dependencies including GitPython for git-based extraction
+- Analysis engine and API integration libraries
+- Testing and development tools
 
 ## Step 2: Configure API Keys
 
@@ -65,10 +71,17 @@ just pilot your-organization-name
 ```
 
 This will:
-- Extract 7 days of PR and commit data
+- Clone repositories locally using git-based extraction (85-90% fewer API calls)
+- Extract 7 days of PR and commit data from local git repositories
 - Analyze code changes with AI
 - Generate impact metrics
 - Create sample reports
+
+**Git-Based Architecture Benefits:**
+- Dramatically reduced GitHub API usage
+- Faster extraction after initial repository clone
+- Offline analysis capability
+- Incremental processing for efficiency
 
 ## Step 5: View Results
 
@@ -93,8 +106,10 @@ just pipeline your-organization-name 30
 ```bash
 just help                   # Show all available commands
 just test                   # Run test suite
-just extract org 30         # Extract 30 days of data
+just extract org 30         # Extract 30 days of data (git-based)
 just analyze data.csv       # Analyze specific dataset
+just cache-status           # Check git and API cache status
+just git-status             # Check git repository health
 ```
 
 ## Troubleshooting

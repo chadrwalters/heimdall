@@ -41,8 +41,8 @@ def reset_caches():
 @pytest.fixture
 def mock_cache_directory():
     """Provide a temporary cache directory for testing."""
-    import tempfile
     import shutil
+    import tempfile
     
     temp_dir = tempfile.mkdtemp()
     cache_dir = os.path.join(temp_dir, ".cache")

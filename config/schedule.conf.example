@@ -1,0 +1,25 @@
+# North Star Metrics - Scheduling Configuration
+# Copy this file to schedule.conf and customize for your organization
+
+# GitHub organization to analyze
+SCHEDULE_ORG="your-org-name"
+
+# Analysis mode: incremental, pilot, full
+SCHEDULE_MODE="incremental"
+
+# Log level: DEBUG, INFO, WARNING, ERROR
+SCHEDULE_LOG_LEVEL="INFO"
+
+# Maximum parallel workers for analysis
+SCHEDULE_MAX_WORKERS="5"
+
+# Optional: Custom output directory (relative to project root)
+# SCHEDULE_OUTPUT_DIR="custom-output"
+
+# Optional: Notification settings
+# SLACK_WEBHOOK_URL="https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+# NOTIFICATION_EMAIL="admin@company.com"
+
+# Optional: Retention settings (days)
+# RESULTS_RETENTION_DAYS="30"
+# LOGS_RETENTION_DAYS="7"

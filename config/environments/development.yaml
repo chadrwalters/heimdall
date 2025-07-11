@@ -1,0 +1,55 @@
+# Development Environment Configuration
+# Optimized for local development and testing
+
+# Processing limits for development
+processing_limits:
+  diff_length_limit: 50000  # Smaller for faster testing
+  cache_size_default: 100
+  max_workers_default: 4  # Lower CPU usage
+  api_timeout_seconds: 30  # Faster timeout for dev
+  api_rate_limit_requests_per_minute: 30  # Conservative for testing
+  max_memory_mb: 2048  # 2GB limit for dev environments
+
+# Validation limits
+validation_limits:
+  title_max_length: 200
+  description_max_length: 5000
+  graphql_max_complexity: 100  # Lower complexity for testing
+
+# Pricing (development uses test/lower rates)
+pricing:
+  claude_input_price_per_1k: 0.003
+  claude_output_price_per_1k: 0.015
+  daily_cost_warning_threshold: 5.0  # $5 daily warning for dev
+  monthly_cost_limit: 50.0  # $50 monthly limit for dev
+
+# Security (relaxed for development)
+security:
+  session_timeout_minutes: 120  # Longer sessions for dev
+  max_failed_attempts: 10  # More lenient for testing
+  key_rotation_days: 90  # Less frequent rotation
+
+# Logging (verbose for development)
+logging:
+  default_log_level: "DEBUG"
+  debug_log_level: "DEBUG"
+  max_log_file_size_mb: 50
+  max_log_files: 10
+  enable_structured_logging: true
+  log_sql_queries: true
+  log_api_calls: true
+
+# Metrics (faster feedback for development)
+metrics:
+  pilot_days: 3  # Shorter pilot for quick testing
+  default_analysis_days: 7  # Shorter default analysis
+  high_impact_threshold: 6.0
+  min_commits_for_analysis: 3  # Lower threshold for testing
+
+# Development-specific features
+development:
+  enable_debug_mode: true
+  enable_hot_reload: true
+  mock_external_apis: false
+  verbose_error_messages: true
+  enable_profiling: false

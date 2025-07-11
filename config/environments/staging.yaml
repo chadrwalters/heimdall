@@ -1,0 +1,76 @@
+# Staging Environment Configuration
+# Bridge between development and production
+
+# Processing limits for staging
+processing_limits:
+  diff_length_limit: 75000  # Between dev and prod
+  cache_size_default: 500
+  max_workers_default: 8  # Moderate concurrency
+  api_timeout_seconds: 45  # Moderate timeout
+  api_rate_limit_requests_per_minute: 60  # Moderate rate limits
+  max_memory_mb: 4096  # 4GB limit for staging
+
+# Validation limits
+validation_limits:
+  title_max_length: 300
+  description_max_length: 10000
+  graphql_max_complexity: 200
+
+# Pricing (staging uses production rates for realistic testing)
+pricing:
+  claude_input_price_per_1k: 0.003
+  claude_output_price_per_1k: 0.015
+  daily_cost_warning_threshold: 25.0  # $25 daily warning
+  monthly_cost_limit: 500.0  # $500 monthly limit
+
+# Security (production-like but slightly relaxed)
+security:
+  session_timeout_minutes: 60  # Moderate session timeout
+  max_failed_attempts: 5  # Moderate failed attempt limit
+  key_rotation_days: 60  # Moderate key rotation
+  encryption_key_length: 32
+  pbkdf2_iterations: 50000
+
+# Logging (more verbose than production for debugging)
+logging:
+  default_log_level: "INFO"
+  debug_log_level: "DEBUG"
+  max_log_file_size_mb: 200
+  max_log_files: 15
+  enable_structured_logging: true
+  log_sql_queries: true  # Enable for staging testing
+  log_api_calls: true  # Enable for staging validation
+
+# Metrics (staging analysis)
+metrics:
+  pilot_days: 5  # Between dev and prod
+  default_analysis_days: 14  # Bi-weekly analysis
+  max_analysis_days: 90  # Support quarterly analysis
+  high_impact_threshold: 7.0
+  min_commits_for_analysis: 5
+  developer_metrics_window_weeks: 2
+
+# Staging-specific features
+staging:
+  enable_debug_mode: true
+  enable_monitoring: true
+  enable_alerting: true
+  enable_circuit_breakers: true
+  enable_rate_limiting: true
+  enable_caching: true
+  verbose_error_messages: true
+  enable_performance_testing: true
+
+# Monitoring and alerting (enabled but less aggressive)
+monitoring:
+  enabled: true
+  check_interval_minutes: 5
+  max_alerts_per_hour: 10
+
+# Email alerts (staging - optional)
+email_alerts:
+  enabled: false
+
+# Slack alerts (staging - development channels)
+slack_alerts:
+  enabled: true

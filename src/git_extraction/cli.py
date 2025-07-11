@@ -1,22 +1,16 @@
 #!/usr/bin/env python3
-"""Git-based extraction script to replace bash scripts."""
+"""Command-line interface for git-based extraction."""
 
+import argparse
 import os
 import sys
-from pathlib import Path
 
-# Add src to path
-src_path = Path(__file__).parent.parent.parent / "src"
-sys.path.insert(0, str(src_path))
-
-from git_extraction.config import GitExtractionConfig
-from git_extraction.git_extractor import GitDataExtractor
+from .config import GitExtractionConfig
+from .git_extractor import GitDataExtractor
 
 
 def main():
-    """Main entry point."""
-    import argparse
-    
+    """Main entry point for git-based extraction CLI."""
     parser = argparse.ArgumentParser(description='Extract data using git repositories')
     parser.add_argument('--org', required=True, help='Organization name')
     parser.add_argument('--days', type=int, default=7, help='Days back to extract')
@@ -107,5 +101,5 @@ def main():
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

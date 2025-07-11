@@ -39,13 +39,17 @@ This guide provides detailed setup instructions for the North Star Metrics Engin
    sudo apt install python3.12 python3.12-pip
    ```
 
-2. **uv Package Manager**
+2. **uv Package Manager** (replaces pip/venv)
    ```bash
-   # Install uv
+   # Install uv (recommended method)
    curl -LsSf https://astral.sh/uv/install.sh | sh
+   
+   # Alternative: via Homebrew (macOS)
+   brew install uv
    
    # Verify installation
    uv --version
+   # Should show version 0.1.0 or higher
    ```
 
 3. **Just Command Runner**
@@ -105,30 +109,34 @@ ls -la
 # Should see main.py, justfile, src/, etc.
 ```
 
-### 2. Set Up Python Environment
+### 2. Set Up Python Environment with UV
 
 ```bash
-# Create and activate virtual environment
+# Setup project environment (automatically creates venv and installs deps)
 just setup
 
 # This runs:
-# uv venv
-# uv pip sync pyproject.toml
+# uv sync (automatically creates .venv/ and installs dependencies)
 
 # Verify the environment was created
 ls -la .venv/
 ```
 
-### 3. Activate Virtual Environment
+### 3. Using UV Environment (No Manual Activation Needed)
+
+UV automatically manages the environment for you:
 
 ```bash
-# Activate the virtual environment
-source .venv/bin/activate
+# Run commands with UV (automatically uses correct environment)
+uv run python --version
+# Shows Python from the virtual environment
 
-# Verify Python is from the virtual environment
-which python
-# Should show: /path/to/metrics/.venv/bin/python
+# All project commands use UV automatically via justfile
+just env-check
+just verify-apis
 ```
+
+**Note**: With UV, you don't need to manually activate/deactivate virtual environments. UV automatically uses the correct environment when you run `uv run` commands or use the justfile commands.
 
 ## Configuration
 
@@ -267,8 +275,8 @@ just test-integration
 ### 1. Dry Run Test
 
 ```bash
-# Test the main script without actually processing
-python main.py --org your-org-name --dry-run
+# Test the main script without actually processing (using UV)
+uv run python main.py --org your-org-name --dry-run
 
 # Expected output:
 # 🌟 North Star Metrics - Engineering Impact Framework
@@ -284,8 +292,8 @@ python main.py --org your-org-name --dry-run
 # Run a small pilot analysis (7 days)
 just pilot your-org-name
 
-# OR using the main script directly
-python main.py --org your-org-name --mode pilot
+# OR using the main script directly with UV
+uv run python main.py --org your-org-name --mode pilot
 
 # This will:
 # 1. Extract GitHub data (repos, PRs, commits)
@@ -385,8 +393,8 @@ echo $ANTHROPIC_API_KEY | cut -c1-7
 Run with debug logging for detailed troubleshooting:
 
 ```bash
-# Enable debug logging
-python main.py --org your-org-name --log-level DEBUG --log-file debug.log
+# Enable debug logging (using UV)
+uv run python main.py --org your-org-name --log-level DEBUG --log-file debug.log
 
 # Review the log file
 tail -f debug.log
@@ -402,8 +410,9 @@ tail -f debug.log
 
 2. **Run Help Commands**
    ```bash
-   python main.py --help
+   uv run python main.py --help
    just --list
+   just help  # Shows organized command help
    ```
 
 3. **Check Project Status**
@@ -421,10 +430,11 @@ If you need to start over:
 # Clean all generated files
 just clean
 
-# Remove virtual environment
+# Remove virtual environment and UV cache
 rm -rf .venv
+uv cache clean
 
-# Re-run setup
+# Re-run setup with UV
 just setup
 ```
 
@@ -444,10 +454,14 @@ After successful setup:
 - **Incremental Updates**: Usually 2-10 minutes
 - **API Rate Limits**: GitHub: 5000/hour, Anthropic: varies by plan
 - **Cost Estimates**: ~$0.01-0.10 per analyzed PR/commit (Anthropic costs)
+- **UV Performance**: 10-100x faster dependency installation compared to pip
+- **Memory Usage**: UV typically uses ~50MB RAM vs ~200MB for pip
 
 ---
 
 For more detailed information, see:
+- [UV Migration Guide](setup/uv-migration.md) - UV package manager migration
+- [Import Conflicts Guide](troubleshooting/import-conflicts.md) - Resolving Python import issues
 - [Main Usage Guide](usage-guide.md)
 - [Configuration Reference](configuration-reference.md)
 - [API Documentation](api-reference.md)

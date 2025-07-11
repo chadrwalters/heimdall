@@ -24,11 +24,9 @@ from typing import Any
 # Add src to Python path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from src.analysis.analysis_engine import AnalysisEngine
 from src.config.config_manager import ConfigManager
 from src.config.state_manager import StateManager
-from src.data.developer_metrics import DeveloperMetricsAggregator
-from src.data.unified_processor import UnifiedDataProcessor
+from src.pipeline.pipeline_coordinator import PipelineCoordinator
 
 
 def setup_logging(log_level: str = "INFO", log_file: str | None = None) -> None:
@@ -333,18 +331,17 @@ def execute_pipeline(
     config_manager: ConfigManager,
     logger: logging.Logger,
 ) -> bool:
-    """Execute the complete data processing pipeline with error recovery."""
-    
+    """Execute the complete data processing pipeline."""
     pipeline_start_time = time.time()
-    recovery_mode = False
     
     try:
-        # Clean up old checkpoints at start
         cleanup_old_checkpoints(output_dir, logger=logger)
-        # Step 1: Data Extraction
+        coordinator = PipelineCoordinator(config_manager, state_manager)
+        
+        # Phase 1: Data Extraction
         if not skip_extraction:
             print("\n📊 Step 1: Extracting data from GitHub...")
-            if not run_extraction_scripts(org, mode, days, config_dir, output_dir, logger):
+            if not coordinator.run_extraction_phase(org, mode, days, config_dir, output_dir):
                 return False
             print("✅ Data extraction completed")
         else:
@@ -354,168 +351,60 @@ def execute_pipeline(
             print("⏭️ Skipping analysis (extraction only mode)")
             return True
         
-        # Step 2: Initialize analysis components
-        print("\n🧠 Step 2: Initializing AI analysis engine...")
-        analysis_engine = AnalysisEngine(max_workers=max_workers)
-        unified_processor = UnifiedDataProcessor(
-            analysis_engine=analysis_engine,
-            state_manager=state_manager
-        )
+        # Phase 2: Analysis
+        print("\n🧠 Step 2: Running AI analysis...")
+        pr_results, commit_results = coordinator.run_analysis_phase(max_workers, output_dir, force)
+        print(f"✅ Processed {len(pr_results)} PRs and {len(commit_results)} commits")
         
-        # Step 3: Process PR data with error recovery
-        pr_results = []
-        pr_file = Path(output_dir) / "org_prs.csv"
-        if pr_file.exists():
-            print(f"\n🔍 Step 3: Processing PR data from {pr_file}...")
-            
-            # Check for existing checkpoint
-            if not force:
-                pr_results = load_latest_checkpoint(output_dir, "prs", logger)
-                if pr_results:
-                    print(f"🔄 Resuming from checkpoint with {len(pr_results)} PRs")
-                    recovery_mode = True
-            
-            if not pr_results:
-                try:
-                    records_processed = unified_processor.process_unified_data(
-                        pr_data_file=str(pr_file),
-                        commit_data_file="org_commits.csv",
-                        output_file="unified_pilot_data.csv",
-                        incremental=(not force)
-                    )
-                    pr_results = f"Processed {records_processed} records"
-                    # Save checkpoint after successful processing
-                    save_progress_checkpoint(pr_results, "prs", output_dir, logger)
-                except Exception as e:
-                    logger.error(f"PR processing failed: {e}")
-                    # Try to load from checkpoint if available
-                    pr_results = load_latest_checkpoint(output_dir, "prs", logger)
-                    if not pr_results:
-                        print(f"❌ PR processing failed and no checkpoint available: {e}")
-                        return False
-                    print(f"🔄 Recovered {len(pr_results)} PRs from checkpoint")
-            
-            print(f"✅ Processed {len(pr_results)} PRs")
-        else:
-            print("⚠️ No PR data file found, skipping PR analysis")
-        
-        # Step 4: Process commit data with error recovery
-        commit_results = []
-        commit_file = Path(output_dir) / "org_commits.csv"
-        if commit_file.exists():
-            print(f"\n🔍 Step 4: Processing commit data from {commit_file}...")
-            
-            # Check for existing checkpoint
-            if not force:
-                commit_results = load_latest_checkpoint(output_dir, "commits", logger)
-                if commit_results:
-                    print(f"🔄 Resuming from checkpoint with {len(commit_results)} commits")
-                    recovery_mode = True
-            
-            if not commit_results:
-                try:
-                    commit_results = unified_processor.process_commits(
-                        str(commit_file), skip_processed=(not force)
-                    )
-                    # Save checkpoint after successful processing
-                    save_progress_checkpoint(commit_results, "commits", output_dir, logger)
-                except Exception as e:
-                    logger.error(f"Commit processing failed: {e}")
-                    # Try to load from checkpoint if available
-                    commit_results = load_latest_checkpoint(output_dir, "commits", logger)
-                    if not commit_results:
-                        print(f"❌ Commit processing failed and no checkpoint available: {e}")
-                        return False
-                    print(f"🔄 Recovered {len(commit_results)} commits from checkpoint")
-            
-            print(f"✅ Processed {len(commit_results)} commits")
-        else:
-            print("⚠️ No commit data file found, skipping commit analysis")
-        
-        # Step 5: Generate unified output
-        print("\n📋 Step 5: Generating unified analysis output...")
+        # Phase 3: Reporting
+        print("\n📋 Step 3: Generating reports and metrics...")
         all_results = pr_results + commit_results
-        
         if all_results:
-            # Apply AI developer overrides from configuration
-            print("\n🤖 Step 5a: Applying AI attribution overrides...")
-            all_results = apply_ai_developer_overrides(all_results, config_manager, logger)
-            output_file = Path(output_dir) / "unified_pilot_data.csv"
-            unified_processor.save_unified_data(all_results, str(output_file))
-            print(f"✅ Saved unified data to {output_file}")
+            coordinator.run_reporting_phase(all_results, output_dir)
             
-            # Step 6: Generate developer metrics
-            print("\n👥 Step 6: Generating developer metrics...")
-            metrics_aggregator = DeveloperMetricsAggregator()
-            developer_metrics = metrics_aggregator.aggregate_from_unified_data(all_results)
+            # Update state
+            pr_ids = [r.get("source_id") for r in pr_results if r.get("source_id")]
+            commit_shas = [r.get("source_id") for r in commit_results if r.get("source_id")]
+            state_manager.update_after_batch_processing(pr_ids, commit_shas, len(all_results))
             
-            metrics_file = Path(output_dir) / "developer_metrics.csv"
-            metrics_aggregator.save_metrics(developer_metrics, str(metrics_file))
-            print(f"✅ Saved developer metrics to {metrics_file}")
-            
-            # Step 7: Update state
-            print("\n💾 Step 7: Updating processing state...")
-            pr_ids = [r["source_id"] for r in pr_results if r.get("source_id")]
-            commit_shas = [r["source_id"] for r in commit_results if r.get("source_id")]
-            
-            state_manager.update_after_batch_processing(
-                pr_ids, commit_shas, len(all_results)
-            )
-            print("✅ State updated successfully")
-            
-            # Display summary statistics
-            print("\n📈 Analysis Summary:")
-            print(f"   Total records analyzed: {len(all_results)}")
-            print(f"   PRs processed: {len(pr_results)}")
-            print(f"   Commits processed: {len(commit_results)}")
-            
-            # Show AI assistance statistics
-            ai_assisted_count = sum(1 for r in all_results if r.get("ai_assisted"))
-            ai_percentage = (ai_assisted_count / len(all_results)) * 100 if all_results else 0
-            print(f"   AI-assisted work: {ai_assisted_count} ({ai_percentage:.1f}%)")
-            
-            # Show process compliance
-            with_tickets = sum(1 for r in all_results if r.get("has_linear_ticket"))
-            compliance_percentage = (with_tickets / len(all_results)) * 100 if all_results else 0
-            print(f"   Process compliant: {with_tickets} ({compliance_percentage:.1f}%)")
-            
-            # Performance monitoring
-            pipeline_duration = time.time() - pipeline_start_time
-            pipeline_minutes = int(pipeline_duration // 60)
-            pipeline_seconds = int(pipeline_duration % 60)
-            
-            if recovery_mode:
-                print("🔄 Pipeline completed using error recovery")
-            
-            print(f"⏱️ Total pipeline time: {pipeline_minutes}m {pipeline_seconds}s")
-            
-            # Log final statistics for monitoring
-            logger.info(f"Pipeline completed successfully for {org}")
-            logger.info(f"Mode: {mode}, Duration: {pipeline_duration:.2f}s")
-            logger.info(f"Results: {len(all_results)} total, {len(pr_results)} PRs, {len(commit_results)} commits")
-            logger.info(f"AI assistance: {ai_percentage:.1f}%, Process compliance: {compliance_percentage:.1f}%")
-            
+            # Display summary
+            _display_pipeline_summary(all_results, pr_results, commit_results, pipeline_start_time)
         else:
             print("⚠️ No data to process")
-            logger.warning("Pipeline completed but no data was processed")
         
         return True
         
     except KeyboardInterrupt:
-        logger.warning("Pipeline execution interrupted by user")
         print("\n⚠️ Pipeline interrupted by user")
         return False
     except Exception as e:
         logger.error(f"Pipeline execution failed: {str(e)}", exc_info=True)
         print(f"❌ Pipeline failed: {str(e)}")
-        
-        # Suggest recovery options
-        print("\n🔧 Recovery Options:")
-        print("   1. Run with --force to reprocess all data")
-        print("   2. Check logs for detailed error information")
-        print("   3. Verify API keys and network connectivity")
-        
         return False
+
+
+def _display_pipeline_summary(all_results: list, pr_results: list, commit_results: list, start_time: float) -> None:
+    """Display pipeline execution summary."""
+    print("\n📈 Analysis Summary:")
+    print(f"   Total records analyzed: {len(all_results)}")
+    print(f"   PRs processed: {len(pr_results)}")
+    print(f"   Commits processed: {len(commit_results)}")
+    
+    # Show AI assistance statistics
+    ai_assisted_count = sum(1 for r in all_results if r.get("ai_assisted"))
+    ai_percentage = (ai_assisted_count / len(all_results)) * 100 if all_results else 0
+    print(f"   AI-assisted work: {ai_assisted_count} ({ai_percentage:.1f}%)")
+    
+    # Show process compliance
+    with_tickets = sum(1 for r in all_results if r.get("has_linear_ticket"))
+    compliance_percentage = (with_tickets / len(all_results)) * 100 if all_results else 0
+    print(f"   Process compliant: {with_tickets} ({compliance_percentage:.1f}%)")
+    
+    # Performance monitoring
+    pipeline_duration = time.time() - start_time
+    pipeline_minutes = int(pipeline_duration // 60)
+    pipeline_seconds = int(pipeline_duration % 60)
+    print(f"⏱️ Total pipeline time: {pipeline_minutes}m {pipeline_seconds}s")
 
 
 def estimate_processing_time(mode: str, days: int, org: str) -> str:

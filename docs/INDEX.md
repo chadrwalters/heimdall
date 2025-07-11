@@ -1,7 +1,7 @@
-# North Star Metrics Documentation Hub
+# GitHub Linear Metrics Documentation Hub
 
 ## Purpose
-Central navigation hub for all North Star Metrics documentation, providing organized access to setup guides, analysis workflows, troubleshooting procedures, and architectural decisions.
+Central navigation hub for GitHub Linear Metrics - an AI-powered developer productivity analysis platform that integrates GitHub commit data with Linear ticket management for comprehensive development insights.
 
 ## When to Use This
 - Finding specific documentation quickly
@@ -11,11 +11,12 @@ Central navigation hub for all North Star Metrics documentation, providing organ
 
 **Keywords:** navigation, index, documentation map, getting started, metrics analysis
 
-Welcome to the comprehensive documentation hub for **North Star Metrics** - an AI-powered engineering impact analytics framework that analyzes code changes across organizations to measure complexity, risk, and engineering effectiveness.
+Welcome to the comprehensive documentation hub for **GitHub Linear Metrics** - an AI-powered developer productivity analysis platform that integrates GitHub commit data with Linear ticket management for comprehensive development insights.
 
-**🏗️ Current Status**: Production-ready framework with comprehensive analysis capabilities
-**📅 Last Updated**: 2025-07-09  
-**📋 Total Documents**: 15+ comprehensive guides across 6 specialized directories
+**🏗️ Current Status**: Production-ready framework with comprehensive analysis capabilities and UV migration complete
+**📅 Last Updated**: 2025-07-11  
+**📋 Total Documents**: 17+ comprehensive guides across 6 specialized directories
+**🔧 Latest Updates**: UV package manager migration, import conflict resolution, enhanced documentation
 
 ---
 
@@ -55,7 +56,8 @@ docs/
 **Focus**: Getting the North Star Metrics framework running in your environment
 
 ### Environment Setup
-- **[Setup Guide](./setup-guide.md)** - Complete environment configuration and API setup ⭐
+- **[Setup Guide](./setup-guide.md)** - Complete environment configuration and API setup (UV-based) ⭐
+- **[UV Migration Guide](./setup/uv-migration.md)** - UV package manager migration and workflows ⭐
 - **[Configuration Reference](./configuration-reference.md)** - Detailed configuration options and environment variables
 - **[Validation Procedures](./validation-procedures.md)** - Testing and validation procedures for setup
 
@@ -135,6 +137,7 @@ docs/
 **Focus**: Common issues, debugging procedures, and problem resolution
 
 ### Common Issues
+- **[Import Conflicts Guide](./troubleshooting/import-conflicts.md)** - Python import conflict resolution ⭐
 - **[Common Problems](./troubleshooting/common-problems.md)** - Frequently encountered issues and solutions
 - **[API Troubleshooting](./troubleshooting/api-issues.md)** - GitHub, Linear, and Anthropic API problems
 - **[Data Quality Issues](./troubleshooting/data-quality.md)** - Handling incomplete or inconsistent data
@@ -163,18 +166,18 @@ docs/
 
 ## 🎯 Key Workflows
 
-### Daily Analysis Workflow
+### Daily Analysis Workflow (UV-based)
 ```bash
-just env-check              # Verify environment
-just pilot organization     # Run 7-day pilot analysis (git-based)
-just analyze results.csv    # Process and interpret results
+just env-check              # Verify environment (UV automatic)
+just pilot organization     # Run 7-day pilot analysis (git-based with UV)
+just analyze results.csv    # Process and interpret results (UV automatic)
 ```
 
-### Full Pipeline Analysis
+### Full Pipeline Analysis (UV-powered)
 ```bash
-just verify-apis            # Test API connectivity
-just pipeline org 30       # Extract and analyze 30 days (git-based)
-just generate-reports       # Create comprehensive reports
+just verify-apis            # Test API connectivity (UV automatic)
+just pipeline org 30       # Extract and analyze 30 days (git-based with UV)
+just generate-reports       # Create comprehensive reports (UV automatic)
 ```
 
 ### Git Cache Management
@@ -197,10 +200,11 @@ just test-integration       # Validate API connections
 ## 📈 Success Metrics
 
 ### Documentation Quality
-- **Comprehensive Coverage**: 15+ guides across all major workflows
+- **Comprehensive Coverage**: 17+ guides across all major workflows
 - **Role-Based Navigation**: Quick paths for different user types
-- **Up-to-Date Information**: Regular updates with framework changes
-- **Practical Examples**: Real-world usage patterns and commands
+- **Up-to-Date Information**: Regular updates with framework changes (UV migration complete)
+- **Practical Examples**: Real-world usage patterns and UV-based commands
+- **Import Resolution**: Comprehensive Python import conflict documentation
 
 ### User Experience
 - **Time to Productivity**: 10-20 minutes from setup to first analysis

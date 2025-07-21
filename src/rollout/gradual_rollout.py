@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 from ..config.environment_loader import get_current_environment
-from ..logging.structured_logger import get_structured_logger
+from ..structured_logging.structured_logger import get_structured_logger
 
 
 class RolloutPhase(Enum):

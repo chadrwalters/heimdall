@@ -1,4 +1,4 @@
-# 🌟 North Star Metrics - Engineering Impact Analytics
+# 🌟 GitHub Linear Metrics - Developer Productivity Analytics
 
 <!-- Auto-attached modular components -->
 @docs/claude-components/safety-rules.md
@@ -9,7 +9,7 @@
 
 ## 🎯 PROJECT OVERVIEW
 
-**North Star Metrics** is a comprehensive framework for tracking and analyzing engineering impact across organizations. It provides data-driven visibility into development work by analyzing commits and pull requests using AI to classify work types and measure impact
+**GitHub Linear Metrics** is a comprehensive framework for tracking and analyzing developer productivity across organizations. It provides data-driven visibility into development work by analyzing commits and pull requests using AI to classify work types and measure impact while integrating with Linear for ticket correlation.
 
 ### Core Capabilities
 - **Multi-Repository Analysis**: Analyzes ALL active repositories in an organization
@@ -26,9 +26,9 @@
 ├─────────────────────────────────────────────────────┤
 │ • justfile - All standardized commands              │
 │ • docs/INDEX.md - Complete documentation hub        │
-│ • docs/setup/quick-start.md - Getting started       │
-│ • docs/workflows/analysis-pipeline.md - Main flow   │
-│ • docs/troubleshooting/ - Common issues & solutions │
+│ • docs/setup-guide.md - Getting started             │
+│ • docs/usage-guide.md - Daily workflows             │
+│ • docs/validation-procedures.md - Testing & QA      │
 │ • config/ - Configuration management                │
 └─────────────────────────────────────────────────────┘
 ```

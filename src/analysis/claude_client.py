@@ -8,7 +8,9 @@ from anthropic import Anthropic
 
 from ..api.rate_limiter import APIRateLimiterFactory
 from ..config.constants import get_settings
-from ..logging import (
+from ..resilience.circuit_breaker import CircuitBreakerConfig, get_circuit_breaker
+from ..security.key_manager import EnvironmentKeyManager, KeySecurityError, SecureKeyManager
+from ..structured_logging import (
     LogContext,
     get_structured_logger,
     log_api_call,
@@ -16,8 +18,6 @@ from ..logging import (
     log_performance,
     set_correlation_id,
 )
-from ..resilience.circuit_breaker import CircuitBreakerConfig, get_circuit_breaker
-from ..security.key_manager import EnvironmentKeyManager, KeySecurityError, SecureKeyManager
 
 logger = get_structured_logger(__name__, LogContext(component="claude_client"))
 

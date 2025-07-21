@@ -7,7 +7,7 @@ import pandas as pd
 
 from src.analysis.analysis_engine import AnalysisEngine
 from src.data.streaming_processor import StreamingCSVProcessor
-from src.logging.structured_logger import get_structured_logger, log_performance
+from src.structured_logging.structured_logger import get_structured_logger, log_performance
 
 logger = get_structured_logger(__name__)
 

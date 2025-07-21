@@ -16,9 +16,9 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from ..analysis.analysis_engine import AnalysisEngine
 from ..config.environment_loader import get_current_environment, get_feature_flags
 from ..data.unified_processor import UnifiedDataProcessor
-from ..logging.structured_logger import get_structured_logger, set_correlation_id
 from ..resilience.alerting import get_active_alerts, get_alert_summary
 from ..resilience.monitoring import get_circuit_breaker_health
+from ..structured_logging.structured_logger import get_structured_logger, set_correlation_id
 
 
 # Pydantic models for API requests/responses

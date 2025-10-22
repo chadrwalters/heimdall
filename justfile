@@ -179,185 +179,103 @@ env-fresh-start:
     @echo "✅ Fresh start complete"
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║                        DATA EXTRACTION & ANALYSIS                          ║
+# ║                          EXTRACT - Data Extraction                          ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
-# Extract data for organization using UV-powered git-based approach
-extract org days="7":
-    @echo "📊 Extracting data for {{org}} (last {{days}} days) using UV-powered git-based approach..."
+# Extract command dispatcher
+extract command *args:
+    @just extract-{{command}} {{args}}
+
+# Extract GitHub data (commits + PRs)
+extract-github org days="7":
+    @echo "📊 Extracting GitHub data for {{org}} (last {{days}} days)..."
     @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @if [ {{days}} -gt 90 ]; then echo "⚠️ Large extraction ({{days}} days) - this may take a while"; fi
-    @uv run python -c "import sys; sys.exit(0 if '{{org}}' and len('{{org}}') > 0 else 1)" || (echo "❌ Organization name required" && exit 1)
-    @echo "🔍 Pre-extraction validation:"
-    @echo "  Organization: {{org}}"
-    @echo "  Days: {{days}}"
-    @echo "  UV environment: $(uv run python --version)"
-    @echo ""
-    @echo "🚀 Starting extraction..."
-    @cd src && uv run python -m git_extraction.simple_cli --org {{org}} --days {{days}}
+    @if [ {{days}} -gt 90 ]; then echo "⚠️  Large extraction ({{days}} days) - this may take time"; fi
+    @cd src && uv run python -m git_extraction.cli --org {{org}} --days {{days}}
     @echo ""
     @echo "📄 Generated files:"
-    @ls -la org_*.csv 2>/dev/null || echo "No output files generated"
-    @echo "✅ Extraction complete for {{org}}"
+    @ls -lh src/org_*.csv 2>/dev/null || echo "No output files generated"
+    @echo "✅ Extraction complete"
 
-# Extract ONLY git commits (test git extraction separately)
-extract-commits org days="30":
-    @echo "📊 Extracting GIT COMMITS for {{org}} ({{days}} days)..."
+# Extract GitHub commits only
+extract-github-commits org days="30":
+    @echo "📊 Extracting GitHub commits for {{org}} ({{days}} days)..."
     @uv run python scripts/test_commits_extraction.py {{org}} {{days}}
 
-# Extract ONLY PRs via GitHub API (test PR extraction separately)
-extract-prs org days="30":
-    @echo "📊 Extracting GITHUB PRs for {{org}} ({{days}} days)..."
+# Extract GitHub PRs only
+extract-github-prs org days="30":
+    @echo "📊 Extracting GitHub PRs for {{org}} ({{days}} days)..."
     @uv run python scripts/test_prs_extraction.py {{org}} {{days}}
 
-# Extract ONLY Linear tickets
+# Extract Linear tickets
 extract-linear org days="30":
-    @echo "📊 Extracting LINEAR tickets for {{org}} ({{days}} days)..."
+    @echo "📊 Extracting Linear tickets for {{org}} ({{days}} days)..."
     @uv run python scripts/test_linear_extraction.py {{org}} {{days}}
 
 # Extract Linear cycle data for team
-extract-linear-cycles team="ENG" output="linear_cycles.csv":
+extract-linear-cycles team output="linear_cycles.csv":
     @echo "📊 Extracting Linear cycle data for team {{team}}..."
     @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @echo "  Team: {{team}}"
-    @echo "  Output: {{output}}"
-    @echo ""
     @uv run python scripts/extract_linear_cycles.py --team {{team}} --output {{output}}
-    @echo ""
     @if [ -f "{{output}}" ]; then \
-        echo "✅ Cycle data extracted to {{output}}"; \
-        wc -l {{output}} | awk '{print "  📄 " $$1-1 " cycle issues extracted"}'; \
+        echo "✅ Extracted to {{output}}"; \
+        wc -l {{output}} | awk '{print "  📄 " $$1-1 " cycle issues"}'; \
     else \
-        echo "❌ Extraction failed - no output file generated"; \
+        echo "❌ Extraction failed"; \
     fi
 
-# Run incremental extraction (automatically handled by git-based approach)
-extract-incremental org:
-    @echo "📊 Running incremental extraction for {{org}}..."
-    @echo "ℹ️ Git-based extraction automatically handles incremental updates"
-    @cd src && uv run python -m git_extraction.cli --org {{org}} --days 1
-
 # List all repositories for organization
-list-repos org:
+extract-list-repos org:
     @echo "📋 Listing repositories for {{org}}..."
-    @uv run python -c "import os, sys; sys.path.insert(0, 'src'); from git.git_extractor import GitDataExtractor; extractor = GitDataExtractor(os.getenv('GITHUB_TOKEN')); repos = extractor.get_organization_repos('{{org}}'); [print(f'{repo[\"name\"]} - {repo[\"description\"] or \"No description\"}') for repo in repos]"
+    @uv run python -c "import os, sys; sys.path.insert(0, 'src'); from git_extraction.git_extractor import GitDataExtractor; extractor = GitDataExtractor(os.getenv('GITHUB_TOKEN')); repos = extractor.get_organization_repos('{{org}}'); [print(f'{repo[\"name\"]:40} {repo[\"description\"] or \"No description\"}') for repo in repos]"
 
-# Extract data for specific repository
-extract-repo repo days="7":
-    @echo "📊 Extracting data for repository {{repo}} (last {{days}} days)..."
-    @echo "ℹ️ Single repo extraction: specify as org/repo format"
-    @uv run python -c "org, repo_name = '{{repo}}'.split('/'); print(f'Extracting {org}/{repo_name}...')"
-    @uv run python scripts/extraction/extract_git.py --org $(echo "{{repo}}" | cut -d'/' -f1) --days {{days}}
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                        CHART - Visualization Generation                     ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 
-# Run 7-day pilot analysis with comprehensive checks
-pilot org:
-    @echo "🚀 Running 7-day pilot analysis for {{org}}..."
-    @echo "🔍 Pre-flight checks..."
-    @just verify-apis
-    @echo "📊 Extracting data (git-based)..."
-    @just extract {{org}} 7
-    @echo "🧠 Running analysis..."
-    @just analyze {{org}}
-    @echo "📈 Generating reports..."
-    @just generate-reports
-    @echo "✅ Pilot analysis complete for {{org}} (git-based extraction used)"
+# Chart command dispatcher
+chart command *args:
+    @just chart-{{command}} {{args}}
 
-# Full pipeline analysis
-pipeline org days:
-    @echo "🔄 Running full pipeline for {{org}} ({{days}} days)..."
-    @if [ {{days}} -gt 60 ]; then echo "⚠️ Large pipeline ({{days}} days) - this may take significant time"; fi
-    @echo "🔍 Pre-flight checks..."
-    @just verify-apis
-    @echo "📊 Extracting data (git-based)..."
-    @just extract {{org}} {{days}}
-    @echo "🧠 Running analysis..."
-    @just analyze {{org}}
-    @echo "📈 Generating reports..."
-    @just generate-reports
-    @echo "✅ Pipeline complete for {{org}} (git-based extraction used)"
-
-# Full pipeline with Linear cycle integration
-pipeline-with-linear org days team="ENG":
-    @echo "🔄 Running full pipeline with Linear integration for {{org}} ({{days}} days)..."
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @if [ {{days}} -gt 60 ]; then echo "⚠️  Large pipeline ({{days}} days) - this may take significant time"; fi
-    @echo ""
-    @echo "🔍 Pre-flight checks..."
-    @just verify-apis
-    @echo ""
-    @echo "📊 Step 1/5: Extracting GitHub data (git-based)..."
-    @just extract {{org}} {{days}}
-    @echo ""
-    @echo "📊 Step 2/5: Extracting Linear cycle data..."
-    @just extract-linear-cycles {{team}} linear_cycles.csv
-    @echo ""
-    @echo "🧠 Step 3/5: Running AI analysis..."
-    @just analyze {{org}}
-    @echo ""
-    @echo "📈 Step 4/5: Generating comprehensive reports..."
-    @just generate-reports
-    @echo ""
-    @echo "📊 Step 5/5: Generating all charts (including cycles)..."
-    @just generate-charts-all src/org_commits.csv src/org_prs.csv linear_cycles.csv charts
-    @echo ""
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @echo "✅ Complete pipeline finished for {{org}}"
-    @echo ""
-    @echo "📂 Outputs:"
-    @echo "  📄 GitHub data: src/org_commits.csv, src/org_prs.csv"
-    @echo "  📄 Linear data: linear_cycles.csv"
-    @echo "  📄 Analysis: analysis_results.csv"
-    @echo "  📊 Charts: charts/*.png"
-
-# Analyze extracted data
-analyze org input="org_prs.csv":
-    @echo "🧠 Running AI analysis on {{input}}..."
-    @if [ ! -f "{{input}}" ]; then echo "❌ Input file {{input}} not found"; exit 1; fi
-    @uv run python main.py --org {{org}} --input {{input}}
-
-# Re-run analysis on existing data
-reanalyze org input:
-    @echo "🔄 Re-running analysis on {{input}}..."
-    @just analyze {{org}} {{input}}
-
-# Generate comprehensive reports
-generate-reports input="analysis_results.csv":
-    @echo "📈 Generating reports from {{input}}..."
-    @uv run python scripts/generate_reports.py {{input}}
-
-# Generate metrics visualization charts
-generate-charts commits="src/org_commits.csv" prs="src/org_prs.csv" output="charts":
+# Generate metrics charts (commits + PRs)
+chart-metrics commits prs output="{{CHARTS_DIR}}":
     @echo "📊 Generating metrics charts..."
     @echo "  Commits: {{commits}}"
     @echo "  PRs: {{prs}}"
     @echo "  Output: {{output}}"
+    @echo ""
     @uv run python scripts/generate_metrics_charts.py --commits {{commits}} --prs {{prs}} --output {{output}}
-    @echo "✅ Charts generated in {{output}}/"
+    @echo ""
+    @ls -1 {{output}}/*.png 2>/dev/null | wc -l | awk '{print "✅ Generated " $$1 " charts in {{output}}/"}' || echo "❌ No charts generated"
 
-# Generate all metrics charts including Linear cycles
-generate-charts-all commits="src/org_commits.csv" prs="src/org_prs.csv" cycles="" output="charts":
-    @echo "📊 Generating comprehensive metrics charts..."
+# Generate all charts including Linear cycles
+chart-all commits prs cycles output="{{CHARTS_DIR}}":
+    @echo "📊 Generating comprehensive charts..."
     @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     @echo "  Commits: {{commits}}"
     @echo "  PRs: {{prs}}"
-    @if [ -n "{{cycles}}" ]; then echo "  Cycles: {{cycles}}"; fi
+    @echo "  Cycles: {{cycles}}"
     @echo "  Output: {{output}}"
     @echo ""
-    @if [ -n "{{cycles}}" ] && [ -f "{{cycles}}" ]; then \
+    @if [ -f "{{cycles}}" ]; then \
         uv run python scripts/generate_metrics_charts.py --commits {{commits}} --prs {{prs}} --cycles {{cycles}} --output {{output}}; \
     else \
+        echo "⚠️  Cycles file not found, generating without cycles"; \
         uv run python scripts/generate_metrics_charts.py --commits {{commits}} --prs {{prs}} --output {{output}}; \
     fi
     @echo ""
-    @echo "📈 Generated charts:"
-    @ls -1 {{output}}/*.png 2>/dev/null | wc -l | awk '{print "  ✅ " $$1 " charts generated"}' || echo "  ❌ No charts generated"
+    @ls -1 {{output}}/*.png 2>/dev/null | wc -l | awk '{print "✅ Generated " $$1 " charts in {{output}}/"}' || echo "❌ No charts generated"
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║                             TESTING & QUALITY                              ║
+# ║                            TEST - Testing Operations                         ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
+# Test command dispatcher
+test command *args:
+    @just test-{{command}} {{args}}
+
 # Run all tests with coverage
-test:
+test-all:
     @echo "🧪 Running all tests with coverage..."
     @uv run python -m pytest tests/ -v --cov=src --cov-report=html --cov-report=term-missing
 
@@ -371,271 +289,123 @@ test-integration:
     @echo "🧪 Running integration tests..."
     @uv run python -m pytest tests/ -v -k "integration" --cov=src --cov-report=term-missing
 
-# Run load tests for performance validation
-test-load *ARGS:
-    @echo "⚡ Running load tests..."
-    @uv run python scripts/run_load_tests.py {{ARGS}}
-
-# Run quick load test with default parameters
-test-load-quick:
-    @echo "⚡ Running quick load test..."
-    @uv run python scripts/run_load_tests.py --test-type analysis --requests 50 --concurrent 5
-
-# Run comprehensive load test suite
-test-load-full:
-    @echo "⚡ Running comprehensive load tests..."
-    @uv run python scripts/run_load_tests.py --test-type all --requests 200 --concurrent 15 --output load_test_report.json
-
-# ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║                               API & SERVICES                                 ║
-# ╚══════════════════════════════════════════════════════════════════════════════╝
-
-# Start the FastAPI development server
-api-dev:
-    @echo "🚀 Starting FastAPI development server..."
-    @uv run uvicorn src.api.app:app --host 0.0.0.0 --port 8000 --reload
-
-# Start the FastAPI production server
-api-prod:
-    @echo "🚀 Starting FastAPI production server..."
-    @uv run uvicorn src.api.app:app --host 0.0.0.0 --port 8000 --workers 4
-
-# Generate OpenAPI documentation
-api-docs:
-    @echo "📖 Generating OpenAPI documentation..."
-    @uv run python -c "from src.api.app import app; import json; print(json.dumps(app.openapi(), indent=2))" > api_docs.json
-    @echo "📖 OpenAPI documentation saved to api_docs.json"
-
-# Test API endpoints
-api-test:
-    @echo "🧪 Testing API endpoints..."
-    @uv run python -m pytest tests/ -v -k "api" --cov=src --cov-report=term-missing
-
-# Run tests in watch mode
-test-watch:
-    @echo "🧪 Running tests in watch mode..."
-    @uv run python -m pytest tests/ -v --cov=src -f
-
-# Test specific API integrations
-test-linear:
-    @echo "🔗 Testing Linear integration..."
-    @uv run python scripts/test_linear_integration.py
-
+# Test GitHub integration
 test-github:
     @echo "🐙 Testing GitHub integration..."
     @uv run python scripts/test_github_integration.py
 
-test-anthropic:
-    @echo "🧠 Testing Anthropic integration..."
-    @uv run python scripts/test_analysis_integration.py
+# Test Linear integration
+test-linear:
+    @echo "🔗 Testing Linear integration..."
+    @uv run python scripts/test_linear_integration.py
 
-test-analysis:
-    @echo "🧠 Testing analysis engine..."
-    @uv run python scripts/test_analysis_integration.py
-
-test-gh-analyzer:
-    @echo "🤖 Testing GitHub Actions analyzer..."
-    @uv run python scripts/test_github_action_analyzer.py
-
+# Test extraction pipeline
 test-extraction:
-    @echo "📊 Testing data extraction..."
+    @echo "📊 Testing extraction pipeline..."
     @./scripts/test_extraction.sh
 
-# Quality assurance commands
-lint:
-    @echo "🔍 Running linting with ruff..."
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                          QUALITY - Code Quality Checks                      ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+# Quality command dispatcher
+quality command *args:
+    @just quality-{{command}} {{args}}
+
+# Run linting with ruff
+quality-lint:
+    @echo "🔍 Linting with ruff..."
     @uv run python -m ruff check src/ tests/ scripts/
 
-format:
-    @echo "🎨 Formatting code with ruff..."
+# Format code with ruff
+quality-format:
+    @echo "🎨 Formatting with ruff..."
     @uv run python -m ruff format src/ tests/ scripts/
 
-typecheck:
-    @echo "🔍 Running type checking with mypy..."
+# Run type checking with mypy
+quality-typecheck:
+    @echo "🔍 Type checking with mypy..."
     @uv run python -m mypy src/
 
-coverage:
-    @echo "📊 Generating test coverage report..."
-    @uv run python -m pytest tests/ --cov=src --cov-report=html --cov-report=term-missing
-    @echo "📈 Coverage report generated in htmlcov/"
-
+# Run all quality checks
 quality-check:
     @echo "🎯 Running full quality suite..."
-    @just lint
-    @just format
-    @just typecheck
-    @just coverage
+    @just quality-lint
+    @just quality-format
+    @just quality-typecheck
+
+# Generate coverage report
+quality-coverage:
+    @echo "📊 Generating coverage report..."
+    @uv run python -m pytest tests/ --cov=src --cov-report=html --cov-report=term-missing
+    @echo "📈 Coverage report: htmlcov/index.html"
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║                          MONITORING & DEBUGGING                            ║
+# ║                        CACHE - Cache Management (Unified)                   ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
-# Show system status and health
-status:
-    @echo "📊 System Status:"
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @just env-check
-    @echo ""
-    @echo "📁 Directory Status:"
-    @ls -la {{ANALYSIS_DIR}}/ 2>/dev/null || echo "Analysis directory empty"
-    @echo ""
-    @echo "🔍 Recent Analysis Files:"
-    @ls -lt {{ANALYSIS_DIR}}/*.csv 2>/dev/null | head -5 || echo "No analysis files found"
+# Cache command dispatcher
+cache command *args:
+    @just cache-{{command}} {{args}}
 
-# Check API health and connectivity
-health:
-    @echo "🏥 Health Check:"
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @just verify-apis
-
-# Show logs for debugging
-logs service="":
-    @echo "📋 Showing logs..."
-    @if [ -n "{{service}}" ]; then \
-        echo "Showing logs for {{service}}"; \
-        cat {{LOGS_DIR}}/{{service}}.log 2>/dev/null || echo "No logs found for {{service}}"; \
-    else \
-        find {{LOGS_DIR}} -name "*.log" -exec echo "=== {} ===" \; -exec tail -20 {} \; 2>/dev/null || echo "No log files found"; \
-    fi
-
-# Debug extraction issues
-debug-extraction:
-    @echo "🔍 Debugging extraction issues..."
-    @uv run python scripts/debug_extraction.py
-
-# Debug analysis issues
-debug-analysis:
-    @echo "🔍 Debugging analysis issues..."
-    @uv run python scripts/debug_analysis.py
-
-# ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║                             CACHE MANAGEMENT                               ║
-# ╚══════════════════════════════════════════════════════════════════════════════╝
-
-# Git repository health check and status
-git-status:
-    @echo "🔍 Git Repository Health Check:"
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @uv run python -c "import sys; sys.path.insert(0, 'src'); from git.repository_service import GitRepositoryService; import os; service = GitRepositoryService(); print('📊 Repository Status:'); stats = service.get_repository_health(); print(f'  Total repositories: {stats[\"total_repos\"]}'); print(f'  Healthy repositories: {stats[\"healthy_repos\"]}'); print(f'  Corrupted repositories: {stats[\"corrupted_repos\"]}'); print(f'  Last updated: {stats[\"last_updated\"]}'); print(f'  Total disk usage: {stats[\"disk_usage\"]}'); print('\n📋 Organizations:'); [print(f'  {org}: {len(repos)} repos') for org, repos in stats[\"organizations\"].items()]; print('\n🚨 Issues:'); [print(f'  ❌ {issue}') for issue in stats[\"issues\"]] if stats[\"issues\"] else print('  ✅ No issues detected')" 2>/dev/null || echo "  (Run 'just setup' to get git repository status)"
-
-# Clean git repositories for specific organization
-git-cleanup org="":
-    @echo "🧹 Git Cache Cleanup..."
-    @if [ -z "{{org}}" ]; then \
-        echo "❌ Organization name required"; \
-        echo "Usage: just git-cleanup organization-name"; \
-        exit 1; \
-    fi
-    @echo "This will remove all cached repositories for {{org}}. Continue? (y/N)"
-    @read -r confirm && [ "$$confirm" = "y" ] || (echo "Aborted" && exit 1)
-    @rm -rf .git_cache/repos/{{org}}/
-    @rm -rf .git_cache/state/{{org}}_*.json
-    @echo "✅ Git cache cleaned for {{org}}"
-    @echo "ℹ️ Repositories will be re-cloned on next extraction"
-
-# Force refresh git repositories for organization
-git-refresh org:
-    @echo "🔄 Refreshing git repositories for {{org}}..."
-    @uv run python -c "import sys; sys.path.insert(0, 'src'); from git.repository_service import GitRepositoryService; import os; service = GitRepositoryService(); result = service.refresh_organization_repos('{{org}}', os.getenv('GITHUB_TOKEN')); print(f'✅ Refreshed {result[\"updated_repos\"]} repositories'); print(f'📊 Total repos: {result[\"total_repos\"]}'); print(f'⏱️ Update time: {result[\"update_time\"]:.2f}s'); [print(f'  ❌ Failed: {repo} - {error}') for repo, error in result[\"failures\"].items()] if result[\"failures\"] else print('  ✅ All repositories updated successfully')" 2>/dev/null || echo "❌ Failed to refresh repositories (run 'just setup' first)"
-
-# Show extraction performance statistics
-extract-stats org:
-    @echo "📊 Extraction Performance Statistics for {{org}}:"
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @uv run python -c "import sys; sys.path.insert(0, 'src'); from git.git_extractor import GitDataExtractor; import os; extractor = GitDataExtractor(os.getenv('GITHUB_TOKEN')); stats = extractor.get_extraction_stats('{{org}}'); print(f'🔢 API Efficiency:'); print(f'  API calls made: {stats[\"api_calls_made\"]}'); print(f'  API calls avoided: {stats[\"api_calls_avoided\"]}'); print(f'  Efficiency: {stats[\"efficiency_percent\"]:.1f}% reduction'); print(f'\n⏱️ Performance:'); print(f'  Last extraction time: {stats[\"last_extraction_time\"]:.2f}s'); print(f'  Average time per repo: {stats[\"avg_time_per_repo\"]:.2f}s'); print(f'  Cache hit rate: {stats[\"cache_hit_rate\"]:.1f}%'); print(f'\n📦 Data Volume:'); print(f'  Repositories processed: {stats[\"repos_processed\"]}'); print(f'  Commits extracted: {stats[\"commits_extracted\"]}'); print(f'  PRs analyzed: {stats[\"prs_analyzed\"]}'); print(f'  Data freshness: {stats[\"data_freshness\"]}')" 2>/dev/null || echo "❌ No extraction statistics available for {{org}}"
-
-# Benchmark git-based vs traditional extraction
-benchmark-extraction org:
-    @echo "⚡ Benchmarking Extraction Performance for {{org}}:"
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @uv run python -c "import sys; sys.path.insert(0, 'src'); from git.git_extractor import GitDataExtractor; import os, time; extractor = GitDataExtractor(os.getenv('GITHUB_TOKEN')); print('🚀 Running extraction benchmark...'); start_time = time.time(); result = extractor.benchmark_extraction('{{org}}', days=7); end_time = time.time(); print(f'\n📊 Benchmark Results:'); print(f'  Git-based extraction: {result[\"git_time\"]:.2f}s'); print(f'  Traditional API calls: {result[\"estimated_api_time\"]:.2f}s (estimated)'); print(f'  Performance improvement: {result[\"improvement_factor\"]:.1f}x faster'); print(f'  API calls saved: {result[\"api_calls_saved\"]}'); print(f'  Cost savings: {result[\"cost_savings_percent\"]:.1f}%'); print(f'\n💾 Storage Analysis:'); print(f'  Cache size: {result[\"cache_size_mb\"]:.1f} MB'); print(f'  Storage per repo: {result[\"storage_per_repo_mb\"]:.2f} MB'); print(f'  Break-even analysis: {result[\"break_even_extractions\"]} extractions')" 2>/dev/null || echo "❌ Benchmark failed (ensure git cache is initialized)"
-
-# Show cache statistics (including git cache)
+# Show cache statistics (API + Git)
 cache-status:
     @echo "📊 Cache Status:"
     @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     @if [ -d ".cache" ]; then \
         echo "📁 API Cache (.cache/):"; \
-        echo "  $(find .cache -name '*.json' | wc -l | tr -d ' ') cache files"; \
+        echo "  $(find .cache -name '*.json' 2>/dev/null | wc -l | tr -d ' ') cache files"; \
         echo "  $(du -sh .cache 2>/dev/null | cut -f1 || echo '0B') total size"; \
     else \
-        echo "📁 API Cache (.cache/): No cache directory found"; \
+        echo "📁 API Cache: Not found"; \
     fi
     @echo ""
     @if [ -d ".git_cache" ]; then \
         echo "📁 Git Cache (.git_cache/):"; \
-        echo "  $(find .git_cache/repos -type d -name '.git' | wc -l | tr -d ' ') repositories cloned"; \
+        echo "  $(find .git_cache/repos -type d -name '.git' 2>/dev/null | wc -l | tr -d ' ') repositories"; \
         echo "  $(du -sh .git_cache 2>/dev/null | cut -f1 || echo '0B') total size"; \
-        echo "  $(find .git_cache/repos -maxdepth 2 -type d | grep -v '^\\.git_cache/repos$$' | wc -l | tr -d ' ') organizations"; \
     else \
-        echo "📁 Git Cache (.git_cache/): No git cache directory found"; \
+        echo "📁 Git Cache: Not found"; \
     fi
-    @echo ""
-    @uv run python -c "import sys; sys.path.insert(0, 'src'); from git.git_extractor import GitDataExtractor; import os; extractor = GitDataExtractor(os.getenv('GITHUB_TOKEN', 'dummy')); stats = extractor.get_cache_stats(); print(f'📊 Git Cache Details:'); print(f'  Total repositories: {stats[\"total_repos\"]}'); print(f'  Total size: {stats[\"total_size_bytes\"]/1024/1024:.1f} MB'); [print(f'  {org}: {len(repos)} repos') for org, repos in stats[\"organizations\"].items()]" 2>/dev/null || echo "  (Run 'just setup' to get detailed git cache stats)"
 
-# Clean expired cache entries (API and git cache)
-cache-clean:
-    @echo "🧹 Cleaning expired cache entries..."
-    @if [ -d ".cache" ]; then \
-        echo "Cleaning API cache..."; \
-        cd scripts/extraction && source utils.sh && clean_cache; \
+# Clean cache (optionally for specific org)
+cache-clean org="":
+    @if [ -z "{{org}}" ]; then \
+        echo "🧹 Cleaning all caches..."; \
+        rm -rf .cache/*.json 2>/dev/null || true; \
+        echo "✅ API cache cleaned"; \
+        echo "ℹ️  Git cache preserved (use 'just cache rebuild' to clean)"; \
     else \
-        echo "No API cache directory found"; \
+        echo "🧹 Cleaning cache for {{org}}..."; \
+        rm -rf .git_cache/repos/{{org}}/ 2>/dev/null || true; \
+        rm -rf .git_cache/state/{{org}}_*.json 2>/dev/null || true; \
+        echo "✅ Cache cleaned for {{org}}"; \
     fi
-    @echo "ℹ️ Git cache (.git_cache) is managed automatically"
-    @echo "   Use 'just cache-rebuild' to force clean git cache"
+
+# Rebuild cache (optionally for specific org)
+cache-rebuild org="":
+    @if [ -z "{{org}}" ]; then \
+        echo "🔄 Rebuilding all caches..."; \
+        echo "⚠️  This will remove ALL cached data. Continue? (y/N)"; \
+        read -r confirm && [ "$$confirm" = "y" ] || (echo "Aborted" && exit 1); \
+        rm -rf .cache/ .git_cache/; \
+        mkdir -p .cache .git_cache/repos .git_cache/state; \
+        echo "✅ All caches rebuilt"; \
+    else \
+        echo "🔄 Rebuilding cache for {{org}}..."; \
+        rm -rf .git_cache/repos/{{org}}/ .git_cache/state/{{org}}_*.json; \
+        echo "✅ Cache rebuilt for {{org}}"; \
+        echo "ℹ️  Repositories will be re-cloned on next extraction"; \
+    fi
 
 # Validate cache integrity
 cache-validate:
     @echo "🔍 Validating cache integrity..."
     @if [ -d ".cache" ]; then \
-        echo "Checking cache files..."; \
-        find .cache -name '*.json' -exec sh -c 'echo "Validating: $$1"; jq . "$$1" >/dev/null 2>&1 || echo "❌ Invalid JSON: $$1"' _ {} \; | tail -20; \
+        echo "Checking API cache files..."; \
+        find .cache -name '*.json' -exec sh -c 'jq . "$$1" >/dev/null 2>&1 || echo "❌ Invalid: $$1"' _ {} \; | head -10; \
+        echo "✅ Validation complete"; \
     else \
         echo "No cache directory found"; \
     fi
 
-# Force rebuild cache (clears all cached data including git cache)
-cache-rebuild:
-    @echo "🔄 Rebuilding cache (clearing all cached data)..."
-    @echo "This will remove ALL cached data including git repositories. Continue? (y/N)"
-    @read -r confirm && [ "$$confirm" = "y" ] || (echo "Aborted" && exit 1)
-    @rm -rf .cache/ .git_cache/
-    @mkdir -p .cache/{repos,prs,commits}
-    @mkdir -p .git_cache/{repos,state}
-    @echo "✅ All caches cleared and rebuilt"
-
-# Warm cache for upcoming analysis
-cache-warm organization days="7":
-    @echo "🔥 Warming cache for {{ organization }} (last {{ days }} days)..."
-    @python -c "from src.analysis.analysis_engine import AnalysisEngine; from src.analysis.cache_warmer import CacheWarmer; engine = AnalysisEngine(); warmer = CacheWarmer(engine); results = warmer.warm_recent_prs('{{ organization }}', days={{ days }}); print(f'✅ Warmed {results[\"warmed_count\"]} entries'); print(f'📊 Already cached: {results[\"already_cached\"]}'); print(f'📦 Total cache size: {results[\"cache_size\"]}'); stats = warmer.get_warming_stats(); print(f'📈 Cache hit rate: {stats[\"cache_hit_rate\"]:.1%}')"
-
-# ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║                             SAFETY HELPERS                                 ║
-# ╚══════════════════════════════════════════════════════════════════════════════╝
-
-# Validate data file integrity
-validate-data file:
-    @echo "🔍 Validating data file {{file}}..."
-    @uv run python scripts/validation/check_data_quality.py {{file}}
-
-# Backup analysis data
-backup-data:
-    @echo "💾 Backing up analysis data..."
-    @mkdir -p backups
-    @tar -czf backups/analysis_backup_$(date +%Y%m%d_%H%M%S).tar.gz {{ANALYSIS_DIR}}/ {{LOGS_DIR}}/
-    @echo "✅ Backup complete"
-
-# Restore from backup
-restore-data:
-    @echo "🔄 Restoring from backup..."
-    @ls -lt backups/ | head -10
-    @echo "Please specify backup file to restore"
-
-# Emergency cleanup
-emergency-cleanup:
-    @echo "🚨 Emergency cleanup..."
-    @echo "This will remove all analysis data and logs. Are you sure? (y/N)"
-    @read -r confirm && [ "$$confirm" = "y" ] || (echo "Aborted" && exit 1)
-    @rm -rf {{ANALYSIS_DIR}}/* {{LOGS_DIR}}/*
-    @echo "✅ Emergency cleanup complete"

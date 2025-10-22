@@ -53,7 +53,7 @@ help:
     @echo "  just env verify-apis                 Verify GitHub, Linear, Anthropic APIs"
     @echo "  just extract github <org> [days]     Extract GitHub data (default: 7 days)"
     @echo "  just chart metrics <csv> <csv>       Generate metrics charts"
-    @echo "  just ai-usage collect <dev> [days=7] Track AI usage"
+    @echo "  just ai-usage collect [dev] [days=7] Track AI usage (auto-detects dev)"
     @echo ""
     @echo "📊 EXTRACT - Data Extraction:"
     @echo "  just extract github <org> [days=7]          Extract GitHub commits + PRs"
@@ -68,10 +68,10 @@ help:
     @echo "  just chart all <commits> <prs> <cycles> [output=charts]  Generate all charts (with cycles)"
     @echo ""
     @echo "🤖 AI-USAGE - AI Usage Tracking:"
-    @echo "  just ai-usage collect <developer> [days=7]     Collect ccusage + codex data"
+    @echo "  just ai-usage collect [developer] [days=7]     Collect ccusage + codex data (auto-detects dev)"
     @echo "  just ai-usage ingest                            Ingest submissions with deduplication"
     @echo "  just ai-usage charts [output=charts]            Generate cost/token charts"
-    @echo "  just ai-usage pipeline <dev> [days=7] [output]  Complete pipeline (collect→ingest→chart)"
+    @echo "  just ai-usage pipeline [dev] [days=7] [output]  Complete pipeline (collect→ingest→chart)"
     @echo ""
     @echo "🧪 TEST - Testing Operations:"
     @echo "  just test all             All tests with coverage"
@@ -282,10 +282,17 @@ chart-all commits prs cycles output="{{CHARTS_DIR}}":
 ai-usage command *args:
     @just ai-usage-{{command}} {{args}}
 
-# Collect AI usage data (ccusage + ccusage-codex)
-ai-usage-collect developer days="7":
-    @echo "📊 Collecting AI usage for {{developer}} (last {{days}} days)..."
-    @uv run python scripts/collect_ai_usage.py {{developer}} {{days}}
+# Collect AI usage data (ccusage + ccusage-codex) - auto-detects developer from git
+ai-usage-collect developer="" days="7":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -n "{{developer}}" ]; then
+        echo "📊 Collecting AI usage for {{developer}} (last {{days}} days)..."
+        uv run hermod collect --developer "{{developer}}" --days {{days}}
+    else
+        echo "📊 Collecting AI usage (auto-detecting developer from git)..."
+        uv run hermod collect --days {{days}}
+    fi
 
 # Ingest submitted AI usage data with deduplication
 ai-usage-ingest:
@@ -297,8 +304,8 @@ ai-usage-charts output="charts":
     @echo "📊 Generating AI usage charts..."
     @uv run python scripts/generate_ai_usage_charts.py data/ai_usage/ingested {{output}}
 
-# Complete pipeline: collect → ingest → charts (for testing with sample data)
-ai-usage-pipeline developer days="7" output="charts":
+# Complete pipeline: collect → ingest → charts (auto-detects developer if not provided)
+ai-usage-pipeline developer="" days="7" output="charts":
     @just ai-usage-collect {{developer}} {{days}}
     @just ai-usage-ingest
     @just ai-usage-charts {{output}}

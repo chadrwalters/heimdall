@@ -118,6 +118,20 @@ help:
 env command *args:
     @just env-{{command}} {{args}}
 
+# Install huginn CLI for PR and git utilities
+env-install-huginn:
+    @echo "📦 Installing huginn CLI from local repository..."
+    @if [ -d ~/source/work/huginn ]; then \
+        uv tool install ~/source/work/huginn && echo "✅ Huginn installed from ~/source/work/huginn"; \
+    else \
+        echo "❌ Huginn repository not found at ~/source/work/huginn"; \
+        echo "   Clone from internal repo or skip PR utilities"; \
+        exit 1; \
+    fi
+    @echo ""
+    @echo "🔍 Verifying huginn installation..."
+    @huginn --help >/dev/null 2>&1 && echo "✅ Huginn (v1.5.0) ready" || echo "❌ Huginn not available in PATH"
+
 # Set up development environment from scratch
 env-setup:
     @echo "🚀 Setting up Heimdall project..."
@@ -128,6 +142,8 @@ env-setup:
     @echo "📦 Installing dependencies..."
     @uv sync
     @echo "✅ Dependencies installed"
+    @echo ""
+    @just env-install-huginn
     @echo ""
     @echo "📁 Creating directories..."
     @mkdir -p {{CHARTS_DIR}} {{DATA_DIR}} logs

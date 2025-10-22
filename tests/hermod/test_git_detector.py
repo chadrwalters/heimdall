@@ -1,4 +1,5 @@
 """Tests for git configuration detection."""
+
 import pytest
 import subprocess
 from unittest.mock import patch, MagicMock
@@ -16,16 +17,14 @@ def test_get_git_user_email_success() -> None:
         email = get_git_user_email()
         assert email == "chad@degreeanalytics.com"
         mock_run.assert_called_once_with(
-            ["git", "config", "user.email"],
-            capture_output=True,
-            text=True,
-            check=True
+            ["git", "config", "user.email"], capture_output=True, text=True, check=True
         )
 
 
 def test_get_git_user_email_not_configured() -> None:
     """Test handling when git email is not configured."""
     import subprocess
+
     with patch("subprocess.run") as mock_run:
         mock_run.side_effect = subprocess.CalledProcessError(1, "git config")
 
@@ -48,7 +47,9 @@ def test_detect_developer_from_git_name() -> None:
 
 def test_detect_developer_from_email() -> None:
     """Test detecting canonical name from git email."""
-    with patch("hermod.git_detector.get_git_user_email", return_value="jeremiah@degreeanalytics.com"):
+    with patch(
+        "hermod.git_detector.get_git_user_email", return_value="jeremiah@degreeanalytics.com"
+    ):
         developer = detect_developer()
         assert developer == "Jeremiah"
 

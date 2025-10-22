@@ -66,7 +66,7 @@ class StructuredFormatter(logging.Formatter):
         try:
             settings = get_settings()
             self.sensitive_patterns = settings.logging.sensitive_patterns
-        except:
+        except Exception:
             self.sensitive_patterns = [
                 r"sk-ant-[\w-]+",  # Anthropic keys
                 r"ghp_[\w]+",  # GitHub tokens

@@ -1,4 +1,5 @@
 """Logging configuration for Hermod."""
+
 import logging
 import sys
 from pathlib import Path
@@ -6,9 +7,7 @@ from typing import Optional
 
 
 def setup_logging(
-    level: str = "INFO",
-    log_file: Optional[Path] = None,
-    format_string: Optional[str] = None
+    level: str = "INFO", log_file: Optional[Path] = None, format_string: Optional[str] = None
 ) -> None:
     """Configure logging for Hermod application.
 

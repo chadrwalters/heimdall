@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
 """Extract Linear cycle data for metrics analysis."""
+
 import sys
 from pathlib import Path
-from datetime import datetime
+
 import pandas as pd
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.linear.linear_client import LinearClient
 from src.config.team_config import team_config
+from src.linear.linear_client import LinearClient
 
 
 def extract_cycle_data(
     team_key: str = "ENG",
     output_file: str = "linear_cycles.csv",
-    name_config: str = "config/developer_names.json"
+    name_config: str = "config/developer_names.json",
 ):
     """Extract cycle data from Linear.
 
@@ -71,17 +72,19 @@ def extract_cycle_data(
         try:
             issues = client.get_cycle_issues(cycle_id)
             if not issues:
-                print(f"  ⚠️  No issues found in this cycle")
+                print("  ⚠️  No issues found in this cycle")
                 continue
             print(f"  Found {len(issues)} issues")
         except Exception as e:
             print(f"  ❌ Error fetching issues for cycle {cycle_num}: {e}")
-            print(f"  Skipping this cycle and continuing...")
+            print("  Skipping this cycle and continuing...")
             continue
 
         for issue in issues:
             try:
-                assignee_name = issue.get("assignee", {}).get("name") if issue.get("assignee") else None
+                assignee_name = (
+                    issue.get("assignee", {}).get("name") if issue.get("assignee") else None
+                )
                 if assignee_name:
                     assignee_name = team_config.get_canonical_name(assignee_name, source="linear")
 
@@ -105,7 +108,7 @@ def extract_cycle_data(
                 all_data.append(data)
             except Exception as e:
                 print(f"  ⚠️  Error processing issue {issue.get('identifier', 'unknown')}: {e}")
-                print(f"  Skipping this issue and continuing...")
+                print("  Skipping this issue and continuing...")
                 continue
 
     # Create DataFrame and save
@@ -126,13 +129,11 @@ def extract_cycle_data(
     if len(df) > 0:
         print("\nSummary by Cycle:")
         try:
-            summary = df.groupby(["cycle_number", "cycle_name"]).agg({
-                "issue_identifier": "count",
-                "estimate": "sum"
-            }).rename(columns={
-                "issue_identifier": "issue_count",
-                "estimate": "total_estimate"
-            })
+            summary = (
+                df.groupby(["cycle_number", "cycle_name"])
+                .agg({"issue_identifier": "count", "estimate": "sum"})
+                .rename(columns={"issue_identifier": "issue_count", "estimate": "total_estimate"})
+            )
             print(summary)
         except Exception as e:
             print(f"⚠️  Error generating summary: {e}")
@@ -142,21 +143,10 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Extract Linear cycle data")
+    parser.add_argument("--team", default="ENG", help="Linear team key (default: ENG)")
+    parser.add_argument("--output", "-o", default="linear_cycles.csv", help="Output CSV file")
     parser.add_argument(
-        "--team",
-        default="ENG",
-        help="Linear team key (default: ENG)"
-    )
-    parser.add_argument(
-        "--output",
-        "-o",
-        default="linear_cycles.csv",
-        help="Output CSV file"
-    )
-    parser.add_argument(
-        "--name-config",
-        default="config/developer_names.json",
-        help="Developer names configuration"
+        "--name-config", default="config/developer_names.json", help="Developer names configuration"
     )
 
     args = parser.parse_args()

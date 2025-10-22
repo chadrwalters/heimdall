@@ -1,4 +1,33 @@
-# Changelog - Metrics Simplification
+# Changelog
+
+## Version 3.0 - Heimdall Migration (2025-10-22)
+
+### 🌟 Project Rebrand: GitHub Linear Metrics → Heimdall
+
+**Heimdall** - Named after the all-seeing Norse god, reflecting the comprehensive visibility this framework provides into developer productivity and organizational metrics.
+
+#### Migration Completed
+- ✅ **Project Metadata**: Updated `pyproject.toml` package name to `heimdall`
+- ✅ **Documentation**: Updated README, CLAUDE.md, and all documentation references
+- ✅ **Justfile**: Updated command interface branding and help text
+- ✅ **Source Code**: Updated module docstrings and code comments
+- ✅ **Configuration**: Updated `.envrc` and environment file references
+- ✅ **GitHub**: Repository renamed from `github_linear_metrics` to `heimdall`
+- ✅ **CI/CD**: Updated GitHub Actions workflow branding
+
+#### Manual Steps Required for Users
+If you have an existing installation, you'll need to:
+1. **Rename Local Directory**: `mv github_linear_metrics heimdall`
+2. **Update Git Remote**: `git remote set-url origin https://github.com/YOUR_ORG/heimdall.git`
+3. **Update Environment File**: Rename `~/.config/secrets/github_linear_metrics.env` to `~/.config/secrets/heimdall.env`
+4. **Re-run Setup**: `cd heimdall && just setup` to rebuild with new package name
+
+#### Breaking Changes
+- Package import remains `from git_extraction import ...` (internal module names unchanged)
+- Data files and cache will regenerate with new references
+- Historical JSON cache files remain unchanged (will regenerate on next run)
+
+---
 
 ## Version 2.1 - Hermod AI Usage Tracking (2025-10-22)
 

@@ -12,7 +12,9 @@ logger = logging.getLogger(__name__)
 class DataValidator:
     """Validate data integrity and quality."""
 
-    def validate_data_integrity(self, output_file: str = "unified_pilot_data.csv") -> dict[str, Any]:
+    def validate_data_integrity(
+        self, output_file: str = "unified_pilot_data.csv"
+    ) -> dict[str, Any]:
         """Validate the integrity of processed data."""
         try:
             df = pd.read_csv(output_file)
@@ -62,9 +64,7 @@ class DataValidator:
             logger.error(f"Error validating data: {e}")
             return {"error": str(e)}
 
-    def save_unified_data(
-        self, records: list, output_file: str, incremental: bool
-    ) -> int:
+    def save_unified_data(self, records: list, output_file: str, incremental: bool) -> int:
         """Save unified records to CSV file."""
         if not records:
             logger.warning("No records to save")

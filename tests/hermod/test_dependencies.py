@@ -1,4 +1,5 @@
 """Tests for external dependency checking."""
+
 import pytest
 from unittest.mock import patch
 from hermod.dependencies import check_ccusage_installed, check_all_dependencies

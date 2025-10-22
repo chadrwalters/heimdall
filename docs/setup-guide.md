@@ -1,6 +1,6 @@
-# North Star Metrics - Setup Guide
+# Heimdall - Setup Guide
 
-This guide provides detailed setup instructions for the North Star Metrics Engineering Impact Framework.
+This guide provides detailed setup instructions for the Heimdall Engineering Observability Framework.
 
 ## Table of Contents
 
@@ -22,6 +22,22 @@ This guide provides detailed setup instructions for the North Star Metrics Engin
 - **Disk Space**: At least 2GB free space
 - **Memory**: 4GB RAM minimum, 8GB recommended
 - **Network**: Internet connection for API calls
+
+### Developer Tools
+
+#### Required
+- **uv**: Python package manager
+- **just**: Command runner
+- **git**: Version control
+
+#### Recommended
+- **Graphite CLI**: Stacked PR workflow
+- **Huginn CLI**: AI-assisted PR/git operations
+- **GitHub CLI**: PR and Actions management
+
+#### Optional
+- **Claude Desktop**: For .claude commands and agents
+- **pre-commit**: Git hooks for quality
 
 ### Required Tools
 
@@ -86,13 +102,36 @@ This guide provides detailed setup instructions for the North Star Metrics Engin
    ```bash
    # Should already be installed, but verify
    git --version
-   
+
    # If not installed:
    # macOS: install Xcode Command Line Tools
    xcode-select --install
-   
+
    # Ubuntu/Debian
    sudo apt install git
+   ```
+
+### Recommended Tools
+
+6. **Graphite CLI** (for stacked PR workflow)
+   ```bash
+   # macOS
+   brew install graphite
+
+   # Verify installation
+   gt --version
+
+   # Initialize in repo (after cloning)
+   gt repo init
+   ```
+
+7. **Huginn CLI** (AI-assisted PR/git operations)
+   ```bash
+   # Installed via justfile after project setup
+   just env install-huginn
+
+   # Verify installation
+   huginn --help
    ```
 
 ## Installation
@@ -101,12 +140,12 @@ This guide provides detailed setup instructions for the North Star Metrics Engin
 
 ```bash
 # Clone the repository
-git clone <your-repo-url>
-cd metrics
+git clone https://github.com/YOUR_ORG/heimdall.git
+cd heimdall
 
 # Verify you're in the right directory
 ls -la
-# Should see main.py, justfile, src/, etc.
+# Should see justfile, src/, docs/, .claude/, etc.
 ```
 
 ### 2. Set Up Python Environment with UV

@@ -36,7 +36,7 @@ class SecurityConfig(BaseSettings):
             "./config",
             "./analysis_results",
         ],
-        env="NS_ALLOWED_DIRECTORIES"
+        env="NS_ALLOWED_DIRECTORIES",
     )
 
 
@@ -64,5 +64,5 @@ class LoggingConfig(BaseSettings):
             r"password[\"':\s=]*[\w.-]+",  # Passwords
             r"secret[\"':\s=]*[\w.-]+",  # Secrets
         ],
-        env="NS_SENSITIVE_PATTERNS"
+        env="NS_SENSITIVE_PATTERNS",
     )

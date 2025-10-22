@@ -9,18 +9,13 @@ import subprocess
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 def run_command(cmd: list[str]) -> Dict[str, Any]:
     """Run command and return parsed JSON output."""
     try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            check=True
-        )
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         return json.loads(result.stdout)
     except subprocess.CalledProcessError as e:
         print(f"Error running {cmd[0]}: {e.stderr}", file=sys.stderr)
@@ -50,15 +45,11 @@ def collect_usage(developer: str, days: int = 7) -> Dict[str, Any]:
 
     # Collect Claude Code usage
     print("   Fetching Claude Code usage...")
-    claude_data = run_command([
-        "ccusage", "daily", "--json", "--since", since_str
-    ])
+    claude_data = run_command(["ccusage", "daily", "--json", "--since", since_str])
 
     # Collect Codex usage
     print("   Fetching Codex usage...")
-    codex_data = run_command([
-        "ccusage-codex", "daily", "--json", "--since", since_str
-    ])
+    codex_data = run_command(["ccusage-codex", "daily", "--json", "--since", since_str])
 
     # Combine with metadata
     combined = {
@@ -68,12 +59,12 @@ def collect_usage(developer: str, days: int = 7) -> Dict[str, Any]:
             "date_range": {
                 "start": start_date.date().isoformat(),
                 "end": end_date.date().isoformat(),
-                "days": days
+                "days": days,
             },
-            "version": "1.0"
+            "version": "1.0",
         },
         "claude_code": claude_data,
-        "codex": codex_data
+        "codex": codex_data,
     }
 
     return combined
@@ -109,8 +100,8 @@ def main():
     print(f"   Codex: {len(data['codex'].get('daily', []))} days")
 
     # Show totals
-    claude_totals = data['claude_code'].get('totals', {})
-    codex_totals = data['codex'].get('totals', {})
+    claude_totals = data["claude_code"].get("totals", {})
+    codex_totals = data["codex"].get("totals", {})
 
     if claude_totals:
         print(f"\n💰 Claude Code Total Cost: ${claude_totals.get('totalCost', 0):.2f}")

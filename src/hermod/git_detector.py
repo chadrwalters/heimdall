@@ -1,4 +1,5 @@
 """Git configuration detection for developer identification."""
+
 import json
 import logging
 import subprocess
@@ -22,10 +23,7 @@ def get_git_user_email() -> str:
     """
     try:
         result = subprocess.run(
-            ["git", "config", "user.email"],
-            capture_output=True,
-            text=True,
-            check=True
+            ["git", "config", "user.email"], capture_output=True, text=True, check=True
         )
         return result.stdout.strip()
     except subprocess.CalledProcessError:
@@ -46,7 +44,7 @@ def get_git_user_name() -> Optional[str]:
             capture_output=True,
             text=True,
             check=True,
-            timeout=GIT_COMMAND_TIMEOUT_SECONDS
+            timeout=GIT_COMMAND_TIMEOUT_SECONDS,
         )
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
@@ -87,10 +85,7 @@ def load_developer_mappings() -> dict:
         for git_name in dev.get("git_names", []):
             name_to_canonical[git_name.lower()] = canonical
 
-    return {
-        "email_to_canonical": email_to_canonical,
-        "name_to_canonical": name_to_canonical
-    }
+    return {"email_to_canonical": email_to_canonical, "name_to_canonical": name_to_canonical}
 
 
 def detect_developer() -> str:

@@ -36,11 +36,11 @@ def load_ai_developers_config() -> AIDevsConfig:
     """Load AI developers configuration from file."""
     import json
     from pathlib import Path
-    
+
     config_file = Path("config/ai_developers.json")
     if config_file.exists():
         with open(config_file) as f:
             data = json.load(f)
         return AIDevsConfig(**data)
-    
+
     return AIDevsConfig()

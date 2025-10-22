@@ -1,4 +1,4 @@
-# 🌟 GitHub Linear Metrics - Developer Productivity Analytics
+# 🌟 Heimdall - Developer Productivity Analytics
 
 <!-- Auto-attached modular components -->
 @docs/claude-components/safety-rules.md
@@ -9,7 +9,7 @@
 
 ## 🎯 PROJECT OVERVIEW
 
-**GitHub Linear Metrics** is a comprehensive framework for tracking and analyzing developer productivity across organizations. It provides data-driven visibility into development work by analyzing commits and pull requests using AI to classify work types and measure impact while integrating with Linear for ticket correlation.
+**Heimdall** is a comprehensive framework for tracking and analyzing developer productivity across organizations. Named after the all-seeing Norse god, Heimdall provides data-driven visibility into development work by analyzing commits and pull requests using AI to classify work types and measure impact while integrating with Linear for ticket correlation.
 
 ### Core Capabilities
 - **Multi-Repository Analysis**: Analyzes ALL active repositories in an organization

@@ -1,4 +1,5 @@
 """Tests for developer color mapping system."""
+
 import pytest
 from src.data.developer_colors import DeveloperColorMapper
 

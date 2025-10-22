@@ -1,5 +1,5 @@
 # ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║              GitHub Linear Metrics - Activity-Based Commands                ║
+# ║                    Heimdall - Activity-Based Commands                       ║
 # ║                                                                              ║
 # ║ 🎯 Focus: Extract data → Generate charts                                    ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
@@ -45,7 +45,7 @@ _default:
 # Show all commands organized by activity
 help:
     @echo "╔══════════════════════════════════════════════════════════════════════════════╗"
-    @echo "║                 GitHub Linear Metrics - Activity Commands                   ║"
+    @echo "║                       Heimdall - Activity Commands                          ║"
     @echo "╚══════════════════════════════════════════════════════════════════════════════╝"
     @echo ""
     @echo "🚀 QUICK START:"
@@ -54,6 +54,34 @@ help:
     @echo "  just extract github <org> [days]     Extract GitHub data (default: 7 days)"
     @echo "  just chart metrics <csv> <csv>       Generate metrics charts"
     @echo "  just ai-usage collect [dev] [days=7] Track AI usage (auto-detects dev)"
+    @echo ""
+    @echo "🔧 GIT - Git Utilities:"
+    @echo "  just git branch                       Show current branch"
+    @echo "  just git commits [count=10]           Show recent commits with graph"
+    @echo "  just git status                       Show git status (short format)"
+    @echo "  just git info                         Show detailed git information"
+    @echo "  just git diff [args]                  Show git diff"
+    @echo ""
+    @echo "🐙 GH - GitHub Utilities:"
+    @echo "  just gh actions <command> [args]      GitHub Actions via huginn"
+    @echo "  just gh actions-latest                View latest Actions run"
+    @echo "  just gh actions-watch                 Watch Actions run in progress"
+    @echo "  just gh branch-sync                   Sync branch with remote"
+    @echo ""
+    @echo "🔀 PR - Pull Request Operations:"
+    @echo "  just pr request-review [args]         Request PR review with AI context"
+    @echo "  just pr enhance [args]                Enhance PR description with AI"
+    @echo "  just pr last-review <command> [args]  Show last PR review"
+    @echo ""
+    @echo "📚 DOCS - Documentation:"
+    @echo "  just docs validate-justfile           Validate justfile documentation"
+    @echo "  just docs validate-links              Check documentation links"
+    @echo "  just docs list                        List all documentation files"
+    @echo ""
+    @echo "🎫 LINEAR - Linear Integration:"
+    @echo "  just linear test                      Test Linear API connection"
+    @echo "  just linear cycles <start> <end>      Extract Linear cycles for date range"
+    @echo "  just linear env                       Show Linear environment variables"
     @echo ""
     @echo "📊 EXTRACT - Data Extraction:"
     @echo "  just extract github <org> [days=7]          Extract GitHub commits + PRs"
@@ -80,13 +108,17 @@ help:
     @echo "  just test github          GitHub integration tests"
     @echo "  just test linear          Linear integration tests"
     @echo "  just test extraction      Extraction pipeline tests"
+    @echo "  just test coverage        Tests with XML coverage (for CI)"
     @echo ""
     @echo "✨ QUALITY - Code Quality:"
-    @echo "  just quality lint         Lint with ruff"
-    @echo "  just quality format       Format with ruff"
-    @echo "  just quality typecheck    Type check with mypy"
-    @echo "  just quality check        All quality checks"
-    @echo "  just quality coverage     Coverage report"
+    @echo "  just quality lint              Lint with ruff"
+    @echo "  just quality format            Format with ruff"
+    @echo "  just quality format-check      Check formatting (no changes)"
+    @echo "  just quality typecheck         Type check with mypy"
+    @echo "  just quality type-check        Type check with mypy (CI alias)"
+    @echo "  just quality security          Security scan with bandit"
+    @echo "  just quality check             All quality checks"
+    @echo "  just quality coverage          Coverage report"
     @echo ""
     @echo "💾 CACHE - Cache Management:"
     @echo "  just cache status         Show cache statistics (API + Git)"
@@ -118,9 +150,23 @@ help:
 env command *args:
     @just env-{{command}} {{args}}
 
+# Install huginn CLI for PR and git utilities
+env-install-huginn:
+    @echo "📦 Installing huginn CLI from local repository..."
+    @if [ -d ~/source/work/huginn ]; then \
+        uv tool install ~/source/work/huginn && echo "✅ Huginn installed from ~/source/work/huginn"; \
+    else \
+        echo "❌ Huginn repository not found at ~/source/work/huginn"; \
+        echo "   Clone from internal repo or skip PR utilities"; \
+        exit 1; \
+    fi
+    @echo ""
+    @echo "🔍 Verifying huginn installation..."
+    @huginn --help >/dev/null 2>&1 && echo "✅ Huginn (v1.5.0) ready" || echo "❌ Huginn not available in PATH"
+
 # Set up development environment from scratch
 env-setup:
-    @echo "🚀 Setting up GitHub Linear Metrics project..."
+    @echo "🚀 Setting up Heimdall project..."
     @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     @which uv > /dev/null || (echo "❌ uv not found. Install: curl -LsSf https://astral.sh/uv/install.sh | sh" && exit 1)
     @echo "✅ UV found: $(uv --version)"
@@ -128,6 +174,8 @@ env-setup:
     @echo "📦 Installing dependencies..."
     @uv sync
     @echo "✅ Dependencies installed"
+    @echo ""
+    @just env-install-huginn
     @echo ""
     @echo "📁 Creating directories..."
     @mkdir -p {{CHARTS_DIR}} {{DATA_DIR}} logs
@@ -185,6 +233,147 @@ env-fresh-start:
     @just env-clean
     @just env-setup
     @echo "✅ Fresh start complete"
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                          GIT - Git Utilities                                 ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+# Git command dispatcher
+git command *args:
+    @just git-{{command}} {{args}}
+
+# Show current branch information
+git-branch:
+    @git rev-parse --abbrev-ref HEAD
+
+# Show recent commits with formatting
+git-commits count='10':
+    @git log --oneline --decorate --graph -n {{count}}
+
+# Show git status with enhanced formatting
+git-status:
+    @git status --short --branch
+
+# Show detailed git information
+git-info:
+    @echo "Branch: $(git rev-parse --abbrev-ref HEAD)"
+    @echo "Commit: $(git rev-parse --short HEAD)"
+    @echo "Remote: $(git remote get-url origin)"
+    @echo "Status:"
+    @git status --short
+
+# Show git diff with context
+git-diff *args:
+    @git diff {{args}}
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                          GH - GitHub Utilities                               ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+# GitHub command dispatcher
+gh command *args:
+    @just gh-{{command}} {{args}}
+
+# GitHub Actions operations via huginn
+gh-actions command *args:
+    @huginn actions {{command}} {{args}}
+
+# View latest GitHub Actions run
+gh-actions-latest:
+    @gh run list --limit 1
+
+# Watch GitHub Actions run
+gh-actions-watch:
+    @gh run watch
+
+# Sync branch with remote
+gh-branch-sync:
+    @echo "Fetching from remote..."
+    @git fetch origin
+    @echo "Current branch: $(git rev-parse --abbrev-ref HEAD)"
+    @echo "Commits behind: $(git rev-list --count HEAD..@{u} 2>/dev/null || echo '0')"
+    @echo "Commits ahead: $(git rev-list --count @{u}..HEAD 2>/dev/null || echo '0')"
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                          PR - Pull Request Operations                       ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+# PR command dispatcher
+pr command *args:
+    @just pr-{{command}} {{args}}
+
+# Request PR reviews with AI-generated context
+pr-request-review *args:
+    @huginn pr request-review {{args}}
+
+# Enhance PR description with AI analysis
+pr-enhance *args:
+    @huginn pr enhance {{args}}
+
+# Show last PR review
+pr-last-review command *args:
+    @huginn pr-last-review {{command}} {{args}}
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                          DOCS - Documentation                                ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+# Documentation command dispatcher
+docs command *args:
+    @just docs-{{command}} {{args}}
+
+# Validate justfile is in sync with documentation
+docs-validate-justfile:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    echo "Validating justfile documentation..."
+
+    # Extract justfile commands
+    just --list --unsorted > /tmp/justfile-commands.txt
+
+    # Check if CLAUDE.md references justfile workflow
+    if ! grep -q "justfile" CLAUDE.md; then
+        echo "❌ CLAUDE.md missing justfile references"
+        exit 1
+    fi
+
+    echo "✅ Justfile documentation valid"
+
+# Validate all documentation links
+docs-validate-links:
+    @echo "Checking documentation links..."
+    @find docs -name "*.md" -type f 2>/dev/null | while read -r file; do \
+        echo "Checking $$file..."; \
+    done
+    @echo "✅ Documentation links validated"
+
+# List all documentation files
+docs-list:
+    @find docs -name "*.md" -type f 2>/dev/null | sort
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                          LINEAR - Linear Integration                        ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+# Linear command dispatcher
+linear command *args:
+    @just linear-{{command}} {{args}}
+
+# Test Linear API connection
+linear-test:
+    @echo "Testing Linear API connection..."
+    @uv run python -c "from src.linear.linear_client import LinearClient; import os; client = LinearClient(os.getenv('LINEAR_API_KEY')); print('✅ Linear API connected')"
+
+# Extract Linear cycles for date range
+linear-cycles start end:
+    @echo "📊 Extracting Linear cycles from {{start}} to {{end}}..."
+    @uv run python scripts/extract_linear_cycles.py --start-date {{start}} --end-date {{end}}
+
+# Show Linear environment variables
+linear-env:
+    @echo "LINEAR_API_KEY: $(echo $$LINEAR_API_KEY | head -c 10)..."
+    @echo "LINEAR_TEAM_ID: $$LINEAR_TEAM_ID"
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                          EXTRACT - Data Extraction                          ║
@@ -348,6 +537,11 @@ test-extraction:
     @echo "📊 Testing extraction pipeline..."
     @./scripts/test_extraction.sh
 
+# Run tests with coverage (for CI)
+test-coverage:
+    @echo "🧪 Running tests with coverage report..."
+    @uv run python -m pytest tests/ -v --cov=src --cov-report=xml --cov-report=term
+
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                          QUALITY - Code Quality Checks                      ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
@@ -383,6 +577,21 @@ quality-coverage:
     @echo "📊 Generating coverage report..."
     @uv run python -m pytest tests/ --cov=src --cov-report=html --cov-report=term-missing
     @echo "📈 Coverage report: htmlcov/index.html"
+
+# Format check (don't modify files)
+quality-format-check:
+    @echo "🔍 Checking code formatting..."
+    @uv run python -m ruff format --check src/ tests/ scripts/
+
+# Type checking with mypy
+quality-type-check:
+    @echo "🔍 Type checking with mypy..."
+    @uv run python -m mypy src/ --ignore-missing-imports
+
+# Security scanning with bandit
+quality-security:
+    @echo "🔒 Running security scan with bandit..."
+    @uv run python -m bandit -c pyproject.toml -r src/
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                        CACHE - Cache Management (Unified)                   ║

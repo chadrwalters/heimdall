@@ -12,8 +12,8 @@ Get the North Star Metrics framework running in under 15 minutes with this strea
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/github_linear_metrics.git
-cd github_linear_metrics
+git clone https://github.com/your-org/heimdall.git
+cd heimdall
 
 # Setup Python environment and dependencies (includes GitPython)
 just setup

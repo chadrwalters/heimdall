@@ -2,6 +2,7 @@
 
 These tests verify the complete collection workflow using real external dependencies.
 """
+
 import json
 import subprocess
 from pathlib import Path
@@ -11,11 +12,7 @@ import pytest
 def check_dependency(cmd: str) -> bool:
     """Check if external dependency is available."""
     try:
-        result = subprocess.run(
-            ["which", cmd],
-            capture_output=True,
-            text=True
-        )
+        result = subprocess.run(["which", cmd], capture_output=True, text=True)
         return result.returncode == 0
     except Exception:
         return False
@@ -26,13 +23,12 @@ ccusage_available = check_dependency("ccusage")
 ccusage_codex_available = check_dependency("ccusage-codex")
 
 skip_if_no_ccusage = pytest.mark.skipif(
-    not ccusage_available,
-    reason="ccusage not installed (npm install -g @anthropics/ccusage)"
+    not ccusage_available, reason="ccusage not installed (npm install -g @anthropics/ccusage)"
 )
 
 skip_if_no_codex = pytest.mark.skipif(
     not ccusage_codex_available,
-    reason="ccusage-codex not installed (npm install -g codex-usage-cli)"
+    reason="ccusage-codex not installed (npm install -g codex-usage-cli)",
 )
 
 
@@ -54,7 +50,7 @@ def test_cli_collect_with_real_dependencies(cleanup_test_files):
     result = subprocess.run(
         ["uv", "run", "hermod", "collect", "--developer", "TestUser", "--days", "7"],
         capture_output=True,
-        text=True
+        text=True,
     )
 
     # Should succeed
@@ -86,7 +82,7 @@ def test_cli_json_output(cleanup_test_files):
     result = subprocess.run(
         ["uv", "run", "hermod", "collect", "--developer", "TestUser", "--days", "3", "--json"],
         capture_output=True,
-        text=True
+        text=True,
     )
 
     assert result.returncode == 0
@@ -114,7 +110,7 @@ def test_justfile_integration(cleanup_test_files):
         ["just", "ai-usage", "collect", "TestUser", "7"],
         capture_output=True,
         text=True,
-        cwd=Path.cwd()
+        cwd=Path.cwd(),
     )
 
     # Should succeed
@@ -135,9 +131,7 @@ def test_auto_detection_from_git(cleanup_test_files):
     """Test auto-detection of developer from git config."""
     # This will use the actual git config from the environment
     result = subprocess.run(
-        ["uv", "run", "hermod", "collect", "--days", "3"],
-        capture_output=True,
-        text=True
+        ["uv", "run", "hermod", "collect", "--days", "3"], capture_output=True, text=True
     )
 
     # Should succeed (will detect from git config)
@@ -157,11 +151,7 @@ def test_auto_detection_from_git(cleanup_test_files):
 
 def test_cli_version():
     """Test version flag works."""
-    result = subprocess.run(
-        ["uv", "run", "hermod", "--version"],
-        capture_output=True,
-        text=True
-    )
+    result = subprocess.run(["uv", "run", "hermod", "--version"], capture_output=True, text=True)
 
     assert result.returncode == 0
     assert "0.1.0" in result.stdout or "Hermod" in result.stdout
@@ -169,11 +159,7 @@ def test_cli_version():
 
 def test_cli_help():
     """Test help output."""
-    result = subprocess.run(
-        ["uv", "run", "hermod", "--help"],
-        capture_output=True,
-        text=True
-    )
+    result = subprocess.run(["uv", "run", "hermod", "--help"], capture_output=True, text=True)
 
     assert result.returncode == 0
     assert "hermod" in result.stdout.lower()
@@ -183,9 +169,7 @@ def test_cli_help():
 def test_collect_help():
     """Test collect command help."""
     result = subprocess.run(
-        ["uv", "run", "hermod", "collect", "--help"],
-        capture_output=True,
-        text=True
+        ["uv", "run", "hermod", "collect", "--help"], capture_output=True, text=True
     )
 
     assert result.returncode == 0

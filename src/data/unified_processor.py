@@ -66,7 +66,9 @@ class UnifiedDataProcessor:
         # Process commits (low-context data)
         commit_records = []
         if not commits_df.empty:
-            commit_records = self.processing_coordinator.process_commit_records(commits_df, pr_commit_shas)
+            commit_records = self.processing_coordinator.process_commit_records(
+                commits_df, pr_commit_shas
+            )
 
         # Combine all records
         all_records = pr_records + commit_records
@@ -75,7 +77,9 @@ class UnifiedDataProcessor:
         all_records.sort(key=lambda r: r.date)
 
         # Save to output file
-        records_written = self.data_validator.save_unified_data(all_records, output_file, incremental)
+        records_written = self.data_validator.save_unified_data(
+            all_records, output_file, incremental
+        )
 
         # Update state
         if incremental:

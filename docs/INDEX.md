@@ -1,7 +1,7 @@
-# GitHub Metrics Visualization Documentation Hub
+# Heimdall Documentation Hub
 
 ## Purpose
-Central navigation hub for GitHub Metrics Visualization - a simple, production-ready metrics tracking system for developer activity across GitHub organizations.
+Central navigation hub for Heimdall - a comprehensive engineering observability framework for tracking developer productivity across organizations.
 
 ## When to Use This
 - Finding specific documentation quickly
@@ -9,13 +9,13 @@ Central navigation hub for GitHub Metrics Visualization - a simple, production-r
 - Onboarding new team members
 - Setting up data extraction and visualization
 
-**Keywords:** navigation, index, documentation map, getting started, metrics visualization, charts
+**Keywords:** navigation, index, documentation map, getting started, heimdall, engineering observability
 
-Welcome to the comprehensive documentation hub for **GitHub Metrics Visualization** - a simple, production-ready system for tracking developer activity through commits and pull requests.
+Welcome to the comprehensive documentation hub for **Heimdall** - named after the all-seeing Norse god, Heimdall provides complete visibility into engineering metrics and team activity through commits and pull requests.
 
-**🏗️ Current Status**: Production-ready metrics visualization system
+**🏗️ Current Status**: Production-ready engineering observability framework
 **📅 Last Updated**: 2025-10-22
-**🔧 Latest Updates**: Simplified to metrics-only system, removed AI analysis features
+**🔧 Latest Updates**: Rebranded to Heimdall, focus on comprehensive observability
 
 ---
 
@@ -47,8 +47,15 @@ Choose your path based on your role and immediate needs:
 - **[Linear Integration Summary](./linear-integration-summary.md)** - Optional Linear ticket correlation
 
 ### Development
+- **[Justfile Reference](../justfile)** - All available commands (`just --list`)
 - **[Justfile Usage](./justfile-usage.md)** - Command reference and automation
 - **[Justfile Implementation](./justfile-implementation.md)** - Command implementation details
+
+### Developer Experience
+- **[Claude Commands](../.claude/README.md)** - AI-assisted workflows
+- **[Graphite Workflow Guide](./graphite-workflow.md)** - Stacked PR development
+- **[Testing & Debugging](./testing-guide.md)** - Test strategy and debugging
+- **[CI/CD Pipeline](../.github/workflows/ci.yml)** - Automated quality checks
 
 ---
 
@@ -96,6 +103,21 @@ just test-integration      # API integration tests
 - **PR Charts**: Daily/weekly PR counts and lines changed
 - **CSV Data**: Raw extracted data for custom analysis
 - **High-Res Charts**: 300 DPI PNG files for presentations
+
+---
+
+## 🏗️ Architecture
+
+Heimdall is a comprehensive framework with multiple components:
+
+- **Heimdall (Core)**: Engineering observability framework for tracking productivity
+- **Hermod (CLI)**: AI usage tracking and metrics collection (coming soon)
+- **Integration Layer**: GitHub, Linear, and Anthropic API connectors
+
+All components use:
+- **Justfile**: Unified command interface (`just --list`)
+- **UV**: Fast Python package management
+- **Claude Commands**: AI-assisted development workflows
 
 ---
 

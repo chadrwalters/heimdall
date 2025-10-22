@@ -52,7 +52,6 @@ developer_metrics.csv
 # Cache directory
 .cache/
 
-.claude/
 .taskmaster/
 .ruff_cache/
 .pytest_cache/

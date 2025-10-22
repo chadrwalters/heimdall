@@ -1,4 +1,5 @@
 """AI usage data collection from ccusage and ccusage-codex."""
+
 import json
 import logging
 import os
@@ -36,18 +37,14 @@ def run_command(cmd: list[str]) -> Dict[str, Any]:
         raise ValueError(f"Command not allowed: {cmd[0] if cmd else 'empty'}")
 
     # Validate arguments don't contain shell injection characters
-    dangerous_chars = {';', '|', '&', '$', '`', '(', ')', '<', '>', '\n', '\r'}
+    dangerous_chars = {";", "|", "&", "$", "`", "(", ")", "<", ">", "\n", "\r"}
     for arg in cmd[1:]:
         if any(char in arg for char in dangerous_chars):
             raise ValueError(f"Invalid argument contains dangerous characters: {arg}")
 
     try:
         result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=COMMAND_TIMEOUT_SECONDS
+            cmd, capture_output=True, text=True, check=True, timeout=COMMAND_TIMEOUT_SECONDS
         )
         data = json.loads(result.stdout)
 
@@ -94,14 +91,10 @@ def collect_usage(developer: str, days: int = 7) -> Dict[str, Any]:
     since_str = start_date.strftime("%Y%m%d")
 
     # Collect Claude Code usage
-    claude_data = run_command([
-        "ccusage", "daily", "--json", "--since", since_str
-    ])
+    claude_data = run_command(["ccusage", "daily", "--json", "--since", since_str])
 
     # Collect Codex usage
-    codex_data = run_command([
-        "ccusage-codex", "daily", "--json", "--since", since_str
-    ])
+    codex_data = run_command(["ccusage-codex", "daily", "--json", "--since", since_str])
 
     # Combine with metadata
     return {
@@ -111,20 +104,16 @@ def collect_usage(developer: str, days: int = 7) -> Dict[str, Any]:
             "date_range": {
                 "start": start_date.date().isoformat(),
                 "end": end_date.date().isoformat(),
-                "days": days
+                "days": days,
             },
-            "version": "1.0"
+            "version": "1.0",
         },
         "claude_code": claude_data,
-        "codex": codex_data
+        "codex": codex_data,
     }
 
 
-def save_submission(
-    data: Dict[str, Any],
-    developer: str,
-    output_dir: Path = None
-) -> Path:
+def save_submission(data: Dict[str, Any], developer: str, output_dir: Path = None) -> Path:
     """Save submission data to JSON file.
 
     Args:

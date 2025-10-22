@@ -35,7 +35,7 @@ class MetricsVisualizer:
         prs_file: str | None = None,
         linear_file: str | None = None,
         output_dir: str = "charts",
-        name_config: str = "config/developer_names.json"
+        name_config: str = "config/developer_names.json",
     ):
         """Initialize visualizer with data files.
 
@@ -69,9 +69,7 @@ class MetricsVisualizer:
         if prs_file and Path(prs_file).exists():
             print(f"Loading PRs from {prs_file}...")
             self.prs_df = pd.read_csv(prs_file)
-            self.prs_df["merged_at"] = pd.to_datetime(
-                self.prs_df["merged_at"], utc=True
-            )
+            self.prs_df["merged_at"] = pd.to_datetime(self.prs_df["merged_at"], utc=True)
             self.prs_df = self._unify_names(self.prs_df, "author")
             print(f"  Loaded {len(self.prs_df)} PRs")
         else:
@@ -96,7 +94,9 @@ class MetricsVisualizer:
         # Determine which source system based on column name
         if author_column == "author":  # GitHub handle
             df[author_column] = df[author_column].apply(
-                lambda x: self.team_config.get_canonical_name(x, source="github") if pd.notna(x) else x
+                lambda x: self.team_config.get_canonical_name(x, source="github")
+                if pd.notna(x)
+                else x
             )
         elif author_column == "author_name":  # Git name
             df[author_column] = df[author_column].apply(
@@ -104,7 +104,9 @@ class MetricsVisualizer:
             )
         elif author_column == "assignee_name":  # Linear name
             df[author_column] = df[author_column].apply(
-                lambda x: self.team_config.get_canonical_name(x, source="linear") if pd.notna(x) else x
+                lambda x: self.team_config.get_canonical_name(x, source="linear")
+                if pd.notna(x)
+                else x
             )
 
         return df
@@ -132,7 +134,7 @@ class MetricsVisualizer:
 
             # Set ticks at actual datetime positions (not integers)
             ax.set_xticks(dates)
-            ax.set_xticklabels(labels, rotation=45, ha='right')
+            ax.set_xticklabels(labels, rotation=45, ha="right")
         else:
             # Daily data - use existing date formatting
             if num_points <= 7:
@@ -145,9 +147,7 @@ class MetricsVisualizer:
             else:
                 ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
 
-    def _filter_main_branches(
-        self, df: pd.DataFrame, date_col: str
-    ) -> pd.DataFrame:
+    def _filter_main_branches(self, df: pd.DataFrame, date_col: str) -> pd.DataFrame:
         """Filter data to main/dev branches only.
 
         Args:
@@ -179,7 +179,7 @@ class MetricsVisualizer:
         date_col: str,
         author_col: str,
         freq: str = "D",
-        metric_col: str | None = None
+        metric_col: str | None = None,
     ) -> pd.DataFrame:
         """Aggregate metrics by time period and developer.
 
@@ -201,29 +201,16 @@ class MetricsVisualizer:
 
         if metric_col:
             # Sum the metric (e.g., additions + deletions)
-            grouped = (
-                df.groupby(["period", author_col])[metric_col]
-                .sum()
-                .reset_index(name="value")
-            )
+            grouped = df.groupby(["period", author_col])[metric_col].sum().reset_index(name="value")
         else:
             # Count records
-            grouped = (
-                df.groupby(["period", author_col])
-                .size()
-                .reset_index(name="value")
-            )
+            grouped = df.groupby(["period", author_col]).size().reset_index(name="value")
 
         grouped["date"] = grouped["period"].dt.to_timestamp()
         return grouped
 
     def _create_line_chart(
-        self,
-        df: pd.DataFrame,
-        author_col: str,
-        title: str,
-        ylabel: str,
-        filename: str
+        self, df: pd.DataFrame, author_col: str, title: str, ylabel: str, filename: str
     ):
         """Create line chart showing per-period counts.
 
@@ -253,8 +240,8 @@ class MetricsVisualizer:
                 color=color_map[developer],
                 alpha=0.8,
                 linewidth=2,
-                marker='o',
-                markersize=4
+                marker="o",
+                markersize=4,
             )
 
         ax.set_title(title, fontsize=16, fontweight="bold", pad=20)
@@ -267,8 +254,8 @@ class MetricsVisualizer:
         num_points = len(pivot.index)
 
         # Determine if this is weekly or daily data
-        freq = df['period'].iloc[0].freq if len(df) > 0 else None
-        is_weekly = freq == 'W' if freq else num_points <= 10
+        freq = df["period"].iloc[0].freq if len(df) > 0 else None
+        is_weekly = freq == "W" if freq else num_points <= 10
 
         if is_weekly:
             self._format_week_axis(ax, pivot.index, num_points)
@@ -293,12 +280,7 @@ class MetricsVisualizer:
         plt.close()
 
     def _create_cumulative_line_chart(
-        self,
-        df: pd.DataFrame,
-        author_col: str,
-        title: str,
-        ylabel: str,
-        filename: str
+        self, df: pd.DataFrame, author_col: str, title: str, ylabel: str, filename: str
     ):
         """Create cumulative line chart.
 
@@ -327,8 +309,8 @@ class MetricsVisualizer:
                 label=developer,
                 color=color_map[developer],
                 linewidth=2,
-                marker='o',
-                markersize=3
+                marker="o",
+                markersize=3,
             )
 
         ax.set_title(title, fontsize=16, fontweight="bold", pad=20)
@@ -341,8 +323,8 @@ class MetricsVisualizer:
         num_points = len(cumulative.index)
 
         # Determine if this is weekly or daily data
-        freq = df['period'].iloc[0].freq if len(df) > 0 else None
-        is_weekly = freq == 'W' if freq else num_points <= 10
+        freq = df["period"].iloc[0].freq if len(df) > 0 else None
+        is_weekly = freq == "W" if freq else num_points <= 10
 
         if is_weekly:
             self._format_week_axis(ax, cumulative.index, num_points)
@@ -398,7 +380,7 @@ class MetricsVisualizer:
             "author_name",
             f"{freq_label} Commits to Main/Dev by Developer",
             "Commits per Day" if freq == "D" else "Commits per Week",
-            f"commits_{freq.lower()}_count_per_period.png"
+            f"commits_{freq.lower()}_count_per_period.png",
         )
 
         self._create_cumulative_line_chart(
@@ -406,7 +388,7 @@ class MetricsVisualizer:
             "author_name",
             f"Cumulative Commits to Main/Dev by Developer ({freq_label})",
             "Total Commits",
-            f"commits_{freq.lower()}_count_cumulative.png"
+            f"commits_{freq.lower()}_count_cumulative.png",
         )
 
         # SIZE charts
@@ -419,7 +401,7 @@ class MetricsVisualizer:
             "author_name",
             f"Cumulative Lines Changed (Commits) ({freq_label})",
             "Total Lines Changed",
-            f"commits_{freq.lower()}_size_cumulative.png"
+            f"commits_{freq.lower()}_size_cumulative.png",
         )
 
     def generate_pr_charts(self, freq: str = "D"):
@@ -455,7 +437,7 @@ class MetricsVisualizer:
             "author",
             f"{freq_label} PRs Merged to Main/Dev by Developer",
             "PRs per Day" if freq == "D" else "PRs per Week",
-            f"prs_{freq.lower()}_count_per_period.png"
+            f"prs_{freq.lower()}_count_per_period.png",
         )
 
         self._create_cumulative_line_chart(
@@ -463,7 +445,7 @@ class MetricsVisualizer:
             "author",
             f"Cumulative PRs Merged to Main/Dev ({freq_label})",
             "Total PRs",
-            f"prs_{freq.lower()}_count_cumulative.png"
+            f"prs_{freq.lower()}_count_cumulative.png",
         )
 
         # SIZE charts
@@ -476,16 +458,11 @@ class MetricsVisualizer:
             "author",
             f"Cumulative Lines Changed (PRs) ({freq_label})",
             "Total Lines Changed",
-            f"prs_{freq.lower()}_size_cumulative.png"
+            f"prs_{freq.lower()}_size_cumulative.png",
         )
 
     def _create_cycle_line_chart(
-        self,
-        cycle_df: pd.DataFrame,
-        metric_column: str,
-        title: str,
-        ylabel: str,
-        output_file: str
+        self, cycle_df: pd.DataFrame, metric_column: str, title: str, ylabel: str, output_file: str
     ):
         """Create line chart for cycle metrics by developer.
 
@@ -505,17 +482,15 @@ class MetricsVisualizer:
             None. Saves chart to file and prints confirmation message.
         """
         # Treat blank/zero estimates as XS (1 point) for story points charts
-        if metric_column == 'estimate':
+        if metric_column == "estimate":
             # Fill NaN and 0 estimates with 1 point (XS)
             cycle_df = cycle_df.copy()
             cycle_df.loc[:, "estimate"] = cycle_df["estimate"].fillna(1).replace(0, 1)
 
         # Group by cycle and assignee
-        if metric_column == 'count':
+        if metric_column == "count":
             grouped = (
-                cycle_df.groupby(["cycle_number", "assignee_name"])
-                .size()
-                .reset_index(name="value")
+                cycle_df.groupby(["cycle_number", "assignee_name"]).size().reset_index(name="value")
             )
         else:  # sum estimates
             grouped = (
@@ -525,9 +500,9 @@ class MetricsVisualizer:
             )
 
         # Pivot for line chart
-        pivot = grouped.pivot(
-            index="cycle_number", columns="assignee_name", values="value"
-        ).fillna(0)
+        pivot = grouped.pivot(index="cycle_number", columns="assignee_name", values="value").fillna(
+            0
+        )
 
         # Get color map for developers
         developers = pivot.columns.tolist()
@@ -549,10 +524,10 @@ class MetricsVisualizer:
                 pivot[developer],
                 label=developer,
                 color=color_map[developer],
-                marker='o',
+                marker="o",
                 linewidth=2,
                 markersize=6,
-                alpha=0.8
+                alpha=0.8,
             )
 
         # Configure axes
@@ -560,7 +535,9 @@ class MetricsVisualizer:
         ax.set_xlabel("Cycle", fontsize=12)
         ax.set_ylabel(ylabel, fontsize=12)
         ax.set_xticks(pivot.index)
-        ax.set_xticklabels([f"Cycle {num}" for num in pivot.index], rotation=45, ha='right', fontsize=10)
+        ax.set_xticklabels(
+            [f"Cycle {num}" for num in pivot.index], rotation=45, ha="right", fontsize=10
+        )
         ax.legend(title="Developer", bbox_to_anchor=(1.05, 1), loc="upper left")
         ax.grid(True, alpha=0.3)
 
@@ -570,11 +547,7 @@ class MetricsVisualizer:
         print(f"✅ Saved: {output_path}")
         plt.close()
 
-    def _create_cycle_completion_chart(
-        self,
-        cycle_df: pd.DataFrame,
-        output_file: str
-    ):
+    def _create_cycle_completion_chart(self, cycle_df: pd.DataFrame, output_file: str):
         """Create line chart showing cycle completion percentage by developer.
 
         Shows what percentage of started work was completed within each cycle.
@@ -590,13 +563,11 @@ class MetricsVisualizer:
         """
         # Calculate started issues per dev per cycle
         started_df = cycle_df[
-            (cycle_df["created_at"] >= cycle_df["cycle_start"]) &
-            (cycle_df["created_at"] <= cycle_df["cycle_end"])
+            (cycle_df["created_at"] >= cycle_df["cycle_start"])
+            & (cycle_df["created_at"] <= cycle_df["cycle_end"])
         ].copy()
         started_counts = (
-            started_df.groupby(["cycle_number", "assignee_name"])
-            .size()
-            .reset_index(name="started")
+            started_df.groupby(["cycle_number", "assignee_name"]).size().reset_index(name="started")
         )
 
         # Calculate issues that were STARTED *AND* COMPLETED in same cycle
@@ -605,13 +576,14 @@ class MetricsVisualizer:
         # Exclude "canceled" (abandoned/deferred work that was NOT shipped)
         started_and_completed_df = cycle_df[
             # Started in cycle
-            (cycle_df["created_at"] >= cycle_df["cycle_start"]) &
-            (cycle_df["created_at"] <= cycle_df["cycle_end"]) &
+            (cycle_df["created_at"] >= cycle_df["cycle_start"])
+            & (cycle_df["created_at"] <= cycle_df["cycle_end"])
+            &
             # AND completed in cycle
-            (cycle_df["state_type"] == "completed") &
-            (cycle_df["completed_at"].notna()) &
-            (cycle_df["completed_at"] >= cycle_df["cycle_start"]) &
-            (cycle_df["completed_at"] <= cycle_df["cycle_end"])
+            (cycle_df["state_type"] == "completed")
+            & (cycle_df["completed_at"].notna())
+            & (cycle_df["completed_at"] >= cycle_df["cycle_start"])
+            & (cycle_df["completed_at"] <= cycle_df["cycle_end"])
         ].copy()
         completed_counts = (
             started_and_completed_df.groupby(["cycle_number", "assignee_name"])
@@ -621,25 +593,20 @@ class MetricsVisualizer:
 
         # Merge started and completed counts
         merged = pd.merge(
-            started_counts,
-            completed_counts,
-            on=["cycle_number", "assignee_name"],
-            how="outer"
+            started_counts, completed_counts, on=["cycle_number", "assignee_name"], how="outer"
         ).fillna(0)
 
         # Calculate Cycle Efficiency: (Started AND Completed) / Started * 100
         # Always ≤100%, measures: "Did we finish what we started?"
         merged["completion_rate"] = (
             (merged["completed"] / merged["started"] * 100)
-            .replace([float('inf'), -float('inf')], 0)
+            .replace([float("inf"), -float("inf")], 0)
             .fillna(0)
         )
 
         # Pivot for plotting
         pivot = merged.pivot(
-            index="cycle_number",
-            columns="assignee_name",
-            values="completion_rate"
+            index="cycle_number", columns="assignee_name", values="completion_rate"
         ).fillna(0)
 
         # Get color map for developers
@@ -662,10 +629,10 @@ class MetricsVisualizer:
                 pivot[developer],
                 label=developer,
                 color=color_map[developer],
-                marker='o',
+                marker="o",
                 linewidth=2,
                 markersize=6,
-                alpha=0.8
+                alpha=0.8,
             )
 
         # Configure axes
@@ -673,7 +640,7 @@ class MetricsVisualizer:
             "Cycle Efficiency: % of Started Work SHIPPED to Customers",
             fontsize=16,
             fontweight="bold",
-            pad=20
+            pad=20,
         )
         ax.set_xlabel("Cycle", fontsize=12)
         ax.set_ylabel("Efficiency (%)", fontsize=12)
@@ -681,7 +648,9 @@ class MetricsVisualizer:
         # Shows what % of work started in a cycle actually got DONE and SHIPPED
         ax.set_ylim(0, 105)  # 5% headroom above 100%
         ax.set_xticks(pivot.index)
-        ax.set_xticklabels([f"Cycle {num}" for num in pivot.index], rotation=45, ha='right', fontsize=10)
+        ax.set_xticklabels(
+            [f"Cycle {num}" for num in pivot.index], rotation=45, ha="right", fontsize=10
+        )
         ax.legend(title="Developer", bbox_to_anchor=(1.05, 1), loc="upper left")
         ax.grid(True, alpha=0.3)
 
@@ -723,8 +692,14 @@ class MetricsVisualizer:
 
         # Validate required columns
         required_columns = [
-            "cycle_number", "assignee_name", "created_at", "completed_at",
-            "cycle_start", "cycle_end", "estimate", "state_type"
+            "cycle_number",
+            "assignee_name",
+            "created_at",
+            "completed_at",
+            "cycle_start",
+            "cycle_end",
+            "estimate",
+            "state_type",
         ]
         missing = [col for col in required_columns if col not in cycle_df.columns]
         if missing:
@@ -733,11 +708,15 @@ class MetricsVisualizer:
 
         # Apply name unification BEFORE filtering
         cycle_df["assignee_name"] = cycle_df["assignee_name"].apply(
-            lambda x: self.team_config.get_canonical_name(x, source="linear") if pd.notna(x) else None
+            lambda x: self.team_config.get_canonical_name(x, source="linear")
+            if pd.notna(x)
+            else None
         )
 
         # Filter for valid assignees
-        valid_df = cycle_df[cycle_df["assignee_name"].notna() & (cycle_df["assignee_name"] != "")].copy()
+        valid_df = cycle_df[
+            cycle_df["assignee_name"].notna() & (cycle_df["assignee_name"] != "")
+        ].copy()
         print(f"  Filtered to {len(valid_df)} issues with assignees")
 
         if len(valid_df) == 0:
@@ -762,8 +741,8 @@ class MetricsVisualizer:
         try:
             # Chart 1: Issues Started (created in cycle period)
             started_df = valid_df[
-                (valid_df["created_at"] >= valid_df["cycle_start"]) &
-                (valid_df["created_at"] <= valid_df["cycle_end"])
+                (valid_df["created_at"] >= valid_df["cycle_start"])
+                & (valid_df["created_at"] <= valid_df["cycle_end"])
             ]
             if len(started_df) > 0:
                 self._create_cycle_line_chart(
@@ -771,7 +750,7 @@ class MetricsVisualizer:
                     "count",
                     "Issues Started in Each Cycle by Developer",
                     "Number of Issues",
-                    "cycle_issues_started.png"
+                    "cycle_issues_started.png",
                 )
             else:
                 print("⚠️  No issues with creation dates in cycle periods")
@@ -783,17 +762,17 @@ class MetricsVisualizer:
                     "estimate",
                     "Story Points Started in Each Cycle by Developer",
                     "Story Points",
-                    "cycle_points_started.png"
+                    "cycle_points_started.png",
                 )
 
             # Chart 3: Issues Completed (completed in cycle period)
             # Only count "completed" (Done) - work actually SHIPPED to customers
             # Exclude "canceled" (abandoned/deferred work that was NOT shipped)
             completed_df = valid_df[
-                (valid_df["state_type"] == "completed") &
-                (valid_df["completed_at"].notna()) &
-                (valid_df["completed_at"] >= valid_df["cycle_start"]) &
-                (valid_df["completed_at"] <= valid_df["cycle_end"])
+                (valid_df["state_type"] == "completed")
+                & (valid_df["completed_at"].notna())
+                & (valid_df["completed_at"] >= valid_df["cycle_start"])
+                & (valid_df["completed_at"] <= valid_df["cycle_end"])
             ]
             if len(completed_df) > 0:
                 self._create_cycle_line_chart(
@@ -801,7 +780,7 @@ class MetricsVisualizer:
                     "count",
                     "Issues Completed in Each Cycle by Developer",
                     "Number of Issues",
-                    "cycle_issues_completed.png"
+                    "cycle_issues_completed.png",
                 )
             else:
                 print("⚠️  No completed issues in cycle periods")
@@ -813,15 +792,12 @@ class MetricsVisualizer:
                     "estimate",
                     "Story Points Completed in Each Cycle by Developer",
                     "Story Points",
-                    "cycle_points_completed.png"
+                    "cycle_points_completed.png",
                 )
 
             # Chart 5: Cycle Completion Rate (NEW)
             if len(started_df) > 0 and len(completed_df) > 0:
-                self._create_cycle_completion_chart(
-                    valid_df,
-                    "cycle_completion_rate.png"
-                )
+                self._create_cycle_completion_chart(valid_df, "cycle_completion_rate.png")
             else:
                 print("⚠️  Not enough data for completion rate chart")
 
@@ -853,9 +829,7 @@ def main():
     """Main entry point."""
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Generate metrics visualization charts"
-    )
+    parser = argparse.ArgumentParser(description="Generate metrics visualization charts")
     parser.add_argument(
         "--commits",
         default="org_commits.csv",
@@ -891,11 +865,7 @@ def main():
     args = parser.parse_args()
 
     visualizer = MetricsVisualizer(
-        args.commits,
-        args.prs,
-        args.linear,
-        args.output,
-        args.name_config
+        args.commits, args.prs, args.linear, args.output, args.name_config
     )
 
     # Generate standard charts

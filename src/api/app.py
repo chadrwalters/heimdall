@@ -24,7 +24,7 @@ from ..structured_logging.structured_logger import get_structured_logger, set_co
 # Pydantic models for API requests/responses
 class ErrorDetail(BaseModel):
     """Detailed error information."""
-    
+
     type: str = Field(..., description="Error type or category")
     message: str = Field(..., description="Human-readable error message")
     code: Optional[str] = Field(None, description="Error code for programmatic handling")
@@ -34,7 +34,7 @@ class ErrorDetail(BaseModel):
 
 class ErrorResponse(BaseModel):
     """Structured error response."""
-    
+
     error: str = Field(..., description="Error summary")
     message: str = Field(..., description="Detailed error message")
     correlation_id: Optional[str] = Field(None, description="Request correlation ID")
@@ -190,37 +190,38 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     """Handle request validation errors."""
     logger = get_structured_logger("api.validation_error")
     correlation_id = request.headers.get("X-Correlation-ID")
-    
+
     error_details = []
     for error in exc.errors():
-        error_details.append(ErrorDetail(
-            type="validation_error",
-            message=error["msg"],
-            code=error["type"],
-            field=".".join(str(loc) for loc in error["loc"]),
-            details={"input": error.get("input")}
-        ))
-    
+        error_details.append(
+            ErrorDetail(
+                type="validation_error",
+                message=error["msg"],
+                code=error["type"],
+                field=".".join(str(loc) for loc in error["loc"]),
+                details={"input": error.get("input")},
+            )
+        )
+
     error_response = ErrorResponse(
         error="Validation Error",
         message="Request validation failed",
         correlation_id=correlation_id,
         path=str(request.url.path),
         details=error_details,
-        suggestion="Please check your request parameters and try again"
+        suggestion="Please check your request parameters and try again",
     )
-    
+
     logger.warning(
         "Request validation failed",
         extra={
             "path": str(request.url.path),
-            "errors": [detail.dict() for detail in error_details]
-        }
+            "errors": [detail.dict() for detail in error_details],
+        },
     )
-    
+
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content=error_response.dict()
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content=error_response.dict()
     )
 
 
@@ -229,7 +230,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     """Handle HTTP exceptions."""
     logger = get_structured_logger("api.http_error")
     correlation_id = request.headers.get("X-Correlation-ID")
-    
+
     # Map common status codes to user-friendly messages
     status_messages = {
         404: "The requested resource was not found",
@@ -237,39 +238,36 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         403: "Access to this resource is forbidden",
         429: "Too many requests. Please try again later",
         500: "An internal server error occurred",
-        503: "Service is temporarily unavailable"
+        503: "Service is temporarily unavailable",
     }
-    
+
     suggestions = {
         404: "Please check the URL and try again",
         401: "Please provide valid authentication credentials",
         403: "Please contact support if you believe you should have access",
         429: "Please wait before making additional requests",
         500: "Please try again later or contact support",
-        503: "Please try again in a few moments"
+        503: "Please try again in a few moments",
     }
-    
+
     error_response = ErrorResponse(
         error=f"HTTP {exc.status_code}",
         message=status_messages.get(exc.status_code, str(exc.detail)),
         correlation_id=correlation_id,
         path=str(request.url.path),
-        suggestion=suggestions.get(exc.status_code)
+        suggestion=suggestions.get(exc.status_code),
     )
-    
+
     logger.error(
         f"HTTP {exc.status_code} error",
         extra={
             "status_code": exc.status_code,
             "path": str(request.url.path),
-            "detail": str(exc.detail)
-        }
+            "detail": str(exc.detail),
+        },
     )
-    
-    return JSONResponse(
-        status_code=exc.status_code,
-        content=error_response.dict()
-    )
+
+    return JSONResponse(status_code=exc.status_code, content=error_response.dict())
 
 
 @app.exception_handler(Exception)
@@ -277,28 +275,27 @@ async def general_exception_handler(request: Request, exc: Exception):
     """Handle unexpected exceptions."""
     logger = get_structured_logger("api.unexpected_error")
     correlation_id = request.headers.get("X-Correlation-ID")
-    
+
     error_response = ErrorResponse(
         error="Internal Server Error",
         message="An unexpected error occurred while processing your request",
         correlation_id=correlation_id,
         path=str(request.url.path),
-        suggestion="Please try again later or contact support if the problem persists"
+        suggestion="Please try again later or contact support if the problem persists",
     )
-    
+
     logger.error(
         "Unexpected error occurred",
         extra={
             "path": str(request.url.path),
             "error_type": type(exc).__name__,
-            "error_message": str(exc)
+            "error_message": str(exc),
         },
-        exc_info=True
+        exc_info=True,
     )
-    
+
     return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content=error_response.dict()
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content=error_response.dict()
     )
 
 
@@ -325,14 +322,14 @@ async def health_check(logger=Depends(get_logger)):
         # Test configuration loading
         from ..config.config_manager import ConfigManager
 
-        config_manager = ConfigManager()
+        _config_manager = ConfigManager()  # noqa: F841
         dependencies["configuration"] = "healthy"
     except Exception as e:
         dependencies["configuration"] = f"unhealthy: {str(e)}"
 
     try:
         # Test analysis engine
-        analysis_engine = AnalysisEngine()
+        _analysis_engine = AnalysisEngine()  # noqa: F841
         dependencies["analysis_engine"] = "healthy"
     except Exception as e:
         dependencies["analysis_engine"] = f"unhealthy: {str(e)}"
@@ -528,8 +525,8 @@ async def _run_analysis_task(
         background_tasks[analysis_id]["status"] = "processing"
 
         # Initialize components
-        analysis_engine = AnalysisEngine()
-        processor = UnifiedDataProcessor()
+        _analysis_engine = AnalysisEngine()  # noqa: F841
+        _processor = UnifiedDataProcessor()  # noqa: F841
 
         # Run analysis (simplified for demo)
         # In production, this would call the actual analysis pipeline

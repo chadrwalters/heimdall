@@ -1,4 +1,5 @@
 """Tests for Linear cycle extraction."""
+
 import pytest
 from unittest.mock import Mock, MagicMock
 from src.linear.linear_client import LinearClient
@@ -19,7 +20,7 @@ def mock_linear_client():
 
 def test_get_cycles_method_exists(mock_linear_client):
     """Test that get_cycles method exists."""
-    assert hasattr(mock_linear_client, 'get_cycles')
+    assert hasattr(mock_linear_client, "get_cycles")
 
 
 def test_get_cycles(mock_linear_client):
@@ -38,14 +39,10 @@ def test_get_cycles(mock_linear_client):
                         "startsAt": "2024-12-18T00:00:00.000Z",
                         "endsAt": "2024-12-31T23:59:59.999Z",
                         "completedAt": "2024-12-31T20:00:00.000Z",
-                        "team": {
-                            "id": "team1",
-                            "key": "ENG",
-                            "name": "Engineering"
-                        },
+                        "team": {"id": "team1", "key": "ENG", "name": "Engineering"},
                         "completedIssueCount": 5,
                         "issueCount": 10,
-                        "progress": 50
+                        "progress": 50,
                     }
                 ]
             }
@@ -63,7 +60,7 @@ def test_get_cycles(mock_linear_client):
 
 def test_get_cycle_issues_method_exists(mock_linear_client):
     """Test that get_cycle_issues method exists."""
-    assert hasattr(mock_linear_client, 'get_cycle_issues')
+    assert hasattr(mock_linear_client, "get_cycle_issues")
 
 
 def test_get_cycle_issues(mock_linear_client):
@@ -84,19 +81,11 @@ def test_get_cycle_issues(mock_linear_client):
                             "assignee": {
                                 "id": "user1",
                                 "name": "Chad Walters",
-                                "email": "chad@example.com"
+                                "email": "chad@example.com",
                             },
-                            "state": {
-                                "id": "state1",
-                                "name": "Done",
-                                "type": "completed"
-                            },
+                            "state": {"id": "state1", "name": "Done", "type": "completed"},
                             "completedAt": "2024-12-25T10:00:00.000Z",
-                            "team": {
-                                "id": "team1",
-                                "key": "ENG",
-                                "name": "Engineering"
-                            }
+                            "team": {"id": "team1", "key": "ENG", "name": "Engineering"},
                         }
                     ]
                 }

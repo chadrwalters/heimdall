@@ -1,7 +1,7 @@
 # UV Migration Guide
 
 ## Purpose
-Comprehensive guide for migrating from traditional Python venv/pip workflows to UV package manager for the GitHub Linear Metrics project.
+Comprehensive guide for migrating from traditional Python venv/pip workflows to UV package manager for the Heimdall project.
 
 ## When to Use This
 - Setting up development environment with UV

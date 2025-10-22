@@ -1,7 +1,7 @@
 # Python Import Conflicts Resolution Guide
 
 ## Purpose
-Documentation for resolving Python import conflicts in the GitHub Linear Metrics project, particularly conflicts between local modules and built-in Python modules.
+Documentation for resolving Python import conflicts in the Heimdall project, particularly conflicts between local modules and built-in Python modules.
 
 ## When to Use This
 - Python modules fail to import correctly

@@ -1,7 +1,7 @@
 [project]
-name = "north-star-metrics"
+name = "heimdall"
 version = "0.1.0"
-description = "Engineering Impact Framework for data-driven visibility into development work"
+description = "Engineering Impact Framework - Heimdall observes developer productivity and engineering metrics"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

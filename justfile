@@ -62,6 +62,12 @@ help:
     @echo "  just git info                         Show detailed git information"
     @echo "  just git diff [args]                  Show git diff"
     @echo ""
+    @echo "🐙 GH - GitHub Utilities:"
+    @echo "  just gh actions <command> [args]      GitHub Actions via huginn"
+    @echo "  just gh actions-latest                View latest Actions run"
+    @echo "  just gh actions-watch                 Watch Actions run in progress"
+    @echo "  just gh branch-sync                   Sync branch with remote"
+    @echo ""
     @echo "🔀 PR - Pull Request Operations:"
     @echo "  just pr request-review [args]         Request PR review with AI context"
     @echo "  just pr enhance [args]                Enhance PR description with AI"
@@ -245,6 +251,34 @@ git-info:
 # Show git diff with context
 git-diff *args:
     @git diff {{args}}
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                          GH - GitHub Utilities                               ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+# GitHub command dispatcher
+gh command *args:
+    @just gh-{{command}} {{args}}
+
+# GitHub Actions operations via huginn
+gh-actions command *args:
+    @huginn actions {{command}} {{args}}
+
+# View latest GitHub Actions run
+gh-actions-latest:
+    @gh run list --limit 1
+
+# Watch GitHub Actions run
+gh-actions-watch:
+    @gh run watch
+
+# Sync branch with remote
+gh-branch-sync:
+    @echo "Fetching from remote..."
+    @git fetch origin
+    @echo "Current branch: $(git rev-parse --abbrev-ref HEAD)"
+    @echo "Commits behind: $(git rev-list --count HEAD..@{u} 2>/dev/null || echo '0')"
+    @echo "Commits ahead: $(git rev-list --count @{u}..HEAD 2>/dev/null || echo '0')"
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                          PR - Pull Request Operations                       ║

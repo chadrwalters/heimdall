@@ -13,9 +13,8 @@ from ..exceptions import (
     JSONProcessingError,
 )
 from .schemas import (
+    AIDevsConfig,
     AnalysisState,
-    validate_ai_developers_config,
-    validate_analysis_state,
 )
 
 
@@ -45,7 +44,7 @@ class ConfigManager:
             with open(self.ai_developers_file) as f:
                 data = json.load(f)
                 # Validate with Pydantic schema
-                validated_config = validate_ai_developers_config(data)
+                validated_config = AIDevsConfig.model_validate(data)
                 # Convert back to dict for backward compatibility
                 return validated_config.model_dump()
         except json.JSONDecodeError as e:
@@ -72,7 +71,7 @@ class ConfigManager:
         """Save AI developers configuration to file."""
         # Validate with Pydantic schema
         try:
-            validated_config = validate_ai_developers_config(config)
+            validated_config = AIDevsConfig.model_validate(config)
         except PydanticValidationError as e:
             raise DataValidationError(
                 f"Invalid AI developers config: {e}",
@@ -94,7 +93,7 @@ class ConfigManager:
             with open(self.state_file) as f:
                 data = json.load(f)
                 # Validate with Pydantic schema
-                validated_state = validate_analysis_state(data)
+                validated_state = AnalysisState.model_validate(data)
                 # Convert back to dict for backward compatibility
                 return validated_state.model_dump()
         except json.JSONDecodeError as e:
@@ -120,7 +119,7 @@ class ConfigManager:
         """Save analysis state to file."""
         # Validate with Pydantic schema
         try:
-            validated_state = validate_analysis_state(state)
+            validated_state = AnalysisState.model_validate(state)
         except PydanticValidationError as e:
             raise DataValidationError(
                 f"Invalid analysis state: {e}",

@@ -9,7 +9,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.linear.linear_client import LinearClient
-from src.data.name_unifier import NameUnifier
+from src.config.team_config import team_config
 
 
 def extract_cycle_data(
@@ -27,12 +27,11 @@ def extract_cycle_data(
     print(f"Extracting Linear cycles for team: {team_key}")
 
     try:
-        # Initialize clients
+        # Initialize Linear client (team config is already initialized as singleton)
         client = LinearClient()
-        unifier = NameUnifier(name_config)
     except Exception as e:
-        print(f"❌ Error initializing clients: {e}")
-        print("Please check your LINEAR_API_KEY environment variable and configuration files.")
+        print(f"❌ Error initializing Linear client: {e}")
+        print("Please check your LINEAR_API_KEY environment variable.")
         sys.exit(1)
 
     # Get all cycles for team
@@ -84,7 +83,7 @@ def extract_cycle_data(
             try:
                 assignee_name = issue.get("assignee", {}).get("name") if issue.get("assignee") else None
                 if assignee_name:
-                    assignee_name = unifier.unify(linear_name=assignee_name)
+                    assignee_name = team_config.get_canonical_name(assignee_name, source="linear")
 
                 data = {
                     "cycle_id": cycle_id,

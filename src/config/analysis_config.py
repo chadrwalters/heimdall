@@ -4,6 +4,8 @@ from datetime import datetime
 from typing import Literal
 from pydantic import BaseModel, Field
 
+from .enums import AITool
+
 
 class MetricsConfig(BaseModel):
     """Configuration for metrics calculation and analysis."""
@@ -33,7 +35,7 @@ class AIDevConfig(BaseModel):
 
     username: str
     email: str | None = None
-    ai_tool: str | None = None
+    ai_tool: AITool | None = None
     percentage: int = Field(default=100, ge=0, le=100)
 
 

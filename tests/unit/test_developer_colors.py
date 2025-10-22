@@ -13,8 +13,8 @@ def test_get_color_for_developer():
     """Test getting consistent color for developer."""
     mapper = DeveloperColorMapper("config/developer_names.json")
 
-    color1 = mapper.get_color("Chad Walters")
-    color2 = mapper.get_color("Chad Walters")
+    color1 = mapper.get_color("Chad")
+    color2 = mapper.get_color("Chad")
 
     assert color1 == color2
     assert isinstance(color1, str)
@@ -25,12 +25,12 @@ def test_get_color_map():
     """Test getting full color map."""
     mapper = DeveloperColorMapper("config/developer_names.json")
 
-    color_map = mapper.get_color_map(["Chad Walters", "EJ", "JP"])
+    color_map = mapper.get_color_map(["Chad", "Eugene", "Josh Park"])
 
     assert len(color_map) == 3
-    assert "Chad Walters" in color_map
-    assert "EJ" in color_map
-    assert "JP" in color_map
+    assert "Chad" in color_map
+    assert "Eugene" in color_map
+    assert "Josh Park" in color_map
     assert all(c.startswith("#") for c in color_map.values())
 
 
@@ -39,8 +39,8 @@ def test_colors_are_consistent_across_instances():
     mapper1 = DeveloperColorMapper("config/developer_names.json")
     mapper2 = DeveloperColorMapper("config/developer_names.json")
 
-    color1 = mapper1.get_color("Chad Walters")
-    color2 = mapper2.get_color("Chad Walters")
+    color1 = mapper1.get_color("Chad")
+    color2 = mapper2.get_color("Chad")
 
     assert color1 == color2
 
@@ -49,8 +49,8 @@ def test_no_color_collisions_for_known_developers():
     """Test that all known developers have unique colors (no hash collisions)."""
     mapper = DeveloperColorMapper("config/developer_names.json")
 
-    # Get colors for all known developers
-    known_developers = ["Chad Walters", "EJ", "Jeremiah", "JP", "Matt Kindy"]
+    # Get colors for all known developers using canonical names
+    known_developers = ["Chad", "Eugene", "Jeremiah", "Josh Park", "Kindy"]
     colors = [mapper.get_color(dev) for dev in known_developers]
 
     # Verify all colors are unique (no collisions)

@@ -20,7 +20,8 @@ def main():
     parser.add_argument('--batch-size', type=int, help='Batch size for processing')
     parser.add_argument('--max-commits', type=int, help='Maximum commits per query')
     parser.add_argument('--verbose', '-v', action='store_true', help='Verbose logging')
-    
+    parser.add_argument('--incremental', action='store_true', help='Incremental mode: append only new data (deduplicate by SHA/number)')
+
     args = parser.parse_args()
     
     # Get GitHub token
@@ -66,10 +67,11 @@ def main():
     
     try:
         summary = extractor.extract_organization_data(
-            args.org, 
-            args.days, 
-            args.commits_output, 
-            args.prs_output
+            args.org,
+            args.days,
+            args.commits_output,
+            args.prs_output,
+            incremental=args.incremental
         )
         
         # Get cache and rate limit stats
@@ -79,8 +81,13 @@ def main():
         print("✅ Extraction completed successfully!")
         print("📊 Summary:")
         print(f"  • Repositories processed: {summary['repositories_found']}")
-        print(f"  • Commits extracted: {summary['commits_extracted']}")
-        print(f"  • PRs extracted: {summary['prs_extracted']}")
+
+        if summary.get('incremental'):
+            print(f"  • Commits added: {summary.get('commits_added', 0)} (deduped: {summary.get('commits_deduped', 0)})")
+            print(f"  • PRs added: {summary.get('prs_added', 0)} (deduped: {summary.get('prs_deduped', 0)})")
+        else:
+            print(f"  • Commits extracted: {summary['commits_extracted']}")
+            print(f"  • PRs extracted: {summary['prs_extracted']}")
         if 'process_compliance_rate' in summary:
             print(f"  • Process compliance: {summary['process_compliance_rate']}%")
         print(f"  • Cache stats: {cache_stats['total_repos']} repos cached ({cache_stats['total_size_bytes'] // 1024 // 1024} MB)")

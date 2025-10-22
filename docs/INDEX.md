@@ -1,22 +1,21 @@
-# GitHub Linear Metrics Documentation Hub
+# GitHub Metrics Visualization Documentation Hub
 
 ## Purpose
-Central navigation hub for GitHub Linear Metrics - an AI-powered developer productivity analysis platform that integrates GitHub commit data with Linear ticket management for comprehensive development insights.
+Central navigation hub for GitHub Metrics Visualization - a simple, production-ready metrics tracking system for developer activity across GitHub organizations.
 
 ## When to Use This
 - Finding specific documentation quickly
-- Understanding project organization and capabilities
+- Understanding chart generation and workflows
 - Onboarding new team members
-- Discovering related documentation and workflows
+- Setting up data extraction and visualization
 
-**Keywords:** navigation, index, documentation map, getting started, metrics analysis
+**Keywords:** navigation, index, documentation map, getting started, metrics visualization, charts
 
-Welcome to the comprehensive documentation hub for **GitHub Linear Metrics** - an AI-powered developer productivity analysis platform that integrates GitHub commit data with Linear ticket management for comprehensive development insights.
+Welcome to the comprehensive documentation hub for **GitHub Metrics Visualization** - a simple, production-ready system for tracking developer activity through commits and pull requests.
 
-**🏗️ Current Status**: Production-ready framework with comprehensive analysis capabilities and UV migration complete
-**📅 Last Updated**: 2025-07-11  
-**📋 Total Documents**: 17+ comprehensive guides across 6 specialized directories
-**🔧 Latest Updates**: UV package manager migration, import conflict resolution, enhanced documentation
+**🏗️ Current Status**: Production-ready metrics visualization system
+**📅 Last Updated**: 2025-10-22
+**🔧 Latest Updates**: Simplified to metrics-only system, removed AI analysis features
 
 ---
 
@@ -26,191 +25,135 @@ Choose your path based on your role and immediate needs:
 
 | Role | Primary Goal | Start Here | Time to Productive |
 |------|-------------|------------|-------------------|
-| **Engineering Manager** | Measure team impact and productivity | [Analysis Guide](#analysis-workflows) → [Metrics Analysis Guide](./claude-components/metrics-analysis-guide.md) | 10 minutes |
-| **Developer** | Set up and run analysis pipeline | [Setup Guide](#setup--environment) → [Quick Start](./setup/quick-start.md) | 15 minutes |
-| **Data Analyst** | Interpret analysis results | [Analysis Outputs](#analysis-workflows) → [Analysis Pipeline](./workflows/analysis-pipeline.md) | 15 minutes |
-| **DevOps Engineer** | Deploy and maintain the system | [Deployment](#deployment--operations) → [GitHub Actions Bot](./github-actions-bot-summary.md) | 20 minutes |
-| **Product Manager** | Understand engineering insights | [Usage Guide](#usage-guide) → [Usage Guide](./usage-guide.md) | 10 minutes |
-| **New Team Member** | Onboard to the framework | [Environment Setup](#setup--environment) → [Setup Guide](./setup-guide.md) | 20 minutes |
+| **Engineering Manager** | Track team activity and velocity | [Chart Documentation](../CHARTS_README.md) | 10 minutes |
+| **Developer** | Set up and run extraction | [Setup Guide](./setup-guide.md) | 15 minutes |
+| **Team Lead** | Generate weekly/monthly reports | [Chart Documentation](../CHARTS_README.md) | 10 minutes |
+| **DevOps Engineer** | Automate data extraction | [Setup Guide](./setup-guide.md) | 20 minutes |
+| **New Team Member** | Understand the system | [README](../README.md) | 10 minutes |
 
 ---
 
-## 📚 Documentation Structure
+## 📚 Core Documentation
 
-Our documentation is organized into 6 specialized directories designed for efficient discovery:
+### Getting Started
+- **[README](../README.md)** - Main project overview and quick start ⭐
+- **[CHARTS_README](../CHARTS_README.md)** - Chart generation and interpretation ⭐
+- **[Setup Guide](./setup-guide.md)** - Environment configuration and API setup
+- **[Configuration Reference](./configuration-reference.md)** - Configuration options and settings
 
-```
-docs/
-├── 🔧 setup/              # Environment setup, getting started, onboarding
-├── 📊 workflows/          # Analysis procedures, pipeline management
-├── 🏗️ architecture/       # System design, technical architecture
-├── 🛠️ development/        # Development tools, testing, contributions
-├── 🔍 troubleshooting/    # Common issues, debugging, solutions
-└── 🧩 claude-components/  # Reusable instruction sets for Claude
-```
+### Usage & Workflows
+- **[Usage Guide](./usage-guide.md)** - Practical usage examples and workflows
+- **[Validation Procedures](./validation-procedures.md)** - Testing and validation
+- **[Linear Integration Summary](./linear-integration-summary.md)** - Optional Linear ticket correlation
 
----
-
-## 🔧 Setup & Environment
-
-**Focus**: Getting the North Star Metrics framework running in your environment
-
-### Environment Setup
-- **[Setup Guide](./setup-guide.md)** - Complete environment configuration and API setup (UV-based) ⭐
-- **[UV Migration Guide](./setup/uv-migration.md)** - UV package manager migration and workflows ⭐
-- **[Configuration Reference](./configuration-reference.md)** - Detailed configuration options and environment variables
-- **[Validation Procedures](./validation-procedures.md)** - Testing and validation procedures for setup
-
-### Quick Start
-- **[Quick Start Guide](./setup/quick-start.md)** - Fastest path to running your first analysis
-- **[Environment Variables](./setup/environment-variables.md)** - Required API keys and configuration
-- **[Troubleshooting Setup](./setup/troubleshooting.md)** - Common setup issues and solutions
-
----
-
-## 📊 Analysis Workflows
-
-**Focus**: Running analysis, interpreting results, and understanding engineering metrics
-
-### Core Analysis
-- **[Metrics Analysis Guide](./claude-components/metrics-analysis-guide.md)** - Comprehensive analysis workflow and interpretation ⭐
-- **[Analysis Pipeline](./workflows/analysis-pipeline.md)** - Step-by-step analysis execution
-- **[Usage Guide](./usage-guide.md)** - Practical usage examples and best practices
-
-### GitHub & Linear Integration
-- **[GitHub-Linear Workflow](./claude-components/github-linear-workflow.md)** - Integration patterns and process compliance ⭐
-- **[Linear Integration Summary](./linear-integration-summary.md)** - Linear API integration and ticket correlation
-- **[AI Detection Methodology](./ai-detection-methodology.md)** - How AI-generated code is detected and classified
-
-### Git-Based Workflows
-- **[Git Extraction Workflow](./workflows/git-extraction-workflow.md)** - Git-based extraction procedures ⭐
-- **[Git Cache Troubleshooting](./troubleshooting/git-cache-issues.md)** - Git cache management and issues ⭐
-
-### Analysis Outputs
-- **[Understanding Results](./workflows/understanding-results.md)** - Interpreting analysis outputs and metrics
-- **[Impact Scoring](./workflows/impact-scoring.md)** - How complexity, risk, and clarity are calculated
-- **[Report Generation](./workflows/report-generation.md)** - CSV outputs and data visualization
-- **[PR Scoring Comparison](./workflows/pr-scoring-comparison.md)** - Automated vs Claude-powered PR analysis
-
----
-
-## 🏗️ Architecture & Design
-
-**Focus**: System design, technical architecture, and integration patterns
-
-### System Architecture
-- **[Architecture Overview](./architecture/system-architecture.md)** - High-level system design and components ⭐
-- **[Git-Based Extraction](./architecture/git-based-extraction.md)** - Revolutionary git-based approach (85-90% API reduction) ⭐
-- **[Data Flow](./architecture/data-flow.md)** - How data moves through the analysis pipeline
-- **[API Integration](./architecture/api-integration.md)** - GitHub, Linear, and Anthropic API patterns
-
-### Technical Implementation
-- **[Analysis Engine](./architecture/analysis-engine.md)** - Core AI analysis and classification system
-- **[Data Processing](./architecture/data-processing.md)** - Data extraction and aggregation patterns
-- **[Security Architecture](./architecture/security.md)** - API key management and data protection
-
----
-
-## 🛠️ Development & Testing
-
-**Focus**: Contributing to the framework, testing, and development workflows
-
-### Development Setup
-- **[Development Guide](./development/development-guide.md)** - Setting up development environment
-- **[Testing Strategy](./development/testing-strategy.md)** - Unit, integration, and end-to-end testing
-- **[Code Standards](./development/code-standards.md)** - Coding conventions and quality standards
-
-### Testing & Validation
-- **[Validation Procedures](./validation-procedures.md)** - Testing and validation procedures ⭐
-- **[Test Suite](./development/test-suite.md)** - Comprehensive testing framework
-- **[Performance Testing](./development/performance-testing.md)** - Load testing and performance validation
-
-### Automation
-- **[GitHub Actions Bot](./github-actions-bot-summary.md)** - Automated PR analysis and feedback
-- **[Justfile Implementation](./justfile-implementation.md)** - Command automation and standardization
-- **[Justfile Usage](./justfile-usage.md)** - Daily workflows and command reference
-
----
-
-## 🔍 Troubleshooting & Support
-
-**Focus**: Common issues, debugging procedures, and problem resolution
-
-### Common Issues
-- **[Import Conflicts Guide](./troubleshooting/import-conflicts.md)** - Python import conflict resolution ⭐
-- **[Common Problems](./troubleshooting/common-problems.md)** - Frequently encountered issues and solutions
-- **[API Troubleshooting](./troubleshooting/api-issues.md)** - GitHub, Linear, and Anthropic API problems
-- **[Data Quality Issues](./troubleshooting/data-quality.md)** - Handling incomplete or inconsistent data
-
-### Debugging & Diagnostics
-- **[Debugging Guide](./troubleshooting/debugging-guide.md)** - Systematic problem diagnosis
-- **[Log Analysis](./troubleshooting/log-analysis.md)** - Understanding system logs and error messages
-- **[Performance Issues](./troubleshooting/performance.md)** - Diagnosing slow analysis or timeouts
-
----
-
-## 🧩 Claude Components
-
-**Focus**: Reusable instruction sets for Claude AI interactions
-
-### Core Components
-- **[Safety Rules](./claude-components/safety-rules.md)** - Critical safety guidelines for system operations
-- **[Justfile Workflow](./claude-components/justfile-workflow.md)** - Standardized command usage patterns
-- **[Verification Standards](./claude-components/verification-standards.md)** - Quality and verification requirements
-
-### Specialized Guides
-- **[Metrics Analysis Guide](./claude-components/metrics-analysis-guide.md)** - Analysis workflow and interpretation
-- **[GitHub-Linear Workflow](./claude-components/github-linear-workflow.md)** - Integration patterns and workflows
+### Development
+- **[Justfile Usage](./justfile-usage.md)** - Command reference and automation
+- **[Justfile Implementation](./justfile-implementation.md)** - Command implementation details
 
 ---
 
 ## 🎯 Key Workflows
 
-### Daily Analysis Workflow (UV-based)
+### Data Extraction
 ```bash
-just env-check              # Verify environment (UV automatic)
-just pilot organization     # Run 7-day pilot analysis (git-based with UV)
-just analyze results.csv    # Process and interpret results (UV automatic)
+# Setup and verify
+just setup
+just env-check
+just verify-apis
+
+# Extract data (30 days)
+uv run python -m git_extraction.cli --org your-org --days 30
 ```
 
-### Full Pipeline Analysis (UV-powered)
+### Chart Generation
 ```bash
-just verify-apis            # Test API connectivity (UV automatic)
-just pipeline org 30       # Extract and analyze 30 days (git-based with UV)
-just generate-reports       # Create comprehensive reports (UV automatic)
+# Generate all 12 charts
+uv run python scripts/generate_metrics_charts.py \
+  --commits src/org_commits.csv \
+  --prs src/org_prs.csv \
+  --output charts
 ```
 
-### Git Cache Management
+### Testing
 ```bash
-just cache-status           # Check git and API cache status
-just git-status             # Check git repository health
-just git-refresh org        # Force refresh git repositories
-just extract-stats org      # Show extraction performance statistics
-```
-
-### Troubleshooting Workflow
-```bash
-just health                 # Check system health
-just logs                   # Review system logs
-just test-integration       # Validate API connections
+just test                   # Run all tests
+just test-unit             # Quick unit tests
+just test-integration      # API integration tests
 ```
 
 ---
 
-## 📈 Success Metrics
+## 📊 What This System Does
 
-### Documentation Quality
-- **Comprehensive Coverage**: 17+ guides across all major workflows
-- **Role-Based Navigation**: Quick paths for different user types
-- **Up-to-Date Information**: Regular updates with framework changes (UV migration complete)
-- **Practical Examples**: Real-world usage patterns and UV-based commands
-- **Import Resolution**: Comprehensive Python import conflict documentation
+### Core Capabilities
+- **Data Extraction**: Pull commits and PRs from GitHub organization
+- **Branch Tracking**: Filter to main/dev branch activity only
+- **Developer Attribution**: Unify developer names across git/GitHub/Linear
+- **Visualization**: Generate 12 time-series charts showing team activity
 
-### User Experience
-- **Time to Productivity**: 10-20 minutes from setup to first analysis
-- **Clear Navigation**: Intuitive organization and cross-references
-- **Actionable Guidance**: Step-by-step procedures with expected outcomes
-- **Troubleshooting Support**: Common issues with solutions
+### Generated Outputs
+- **Commit Charts**: Daily/weekly commit counts and lines changed
+- **PR Charts**: Daily/weekly PR counts and lines changed
+- **CSV Data**: Raw extracted data for custom analysis
+- **High-Res Charts**: 300 DPI PNG files for presentations
+
+---
+
+## ⚙️ Configuration
+
+### Required Environment Variables
+```bash
+# GitHub API access (required)
+GITHUB_TOKEN=your_github_token_here
+
+# Linear integration (optional)
+LINEAR_API_KEY=your_linear_api_key_here
+```
+
+### Developer Name Unification
+Configure `config/developer_names.json` to map developer identities:
+```json
+{
+  "developers": [
+    {
+      "canonical_name": "Developer Name",
+      "git_names": ["git_name_1", "git_name_2"],
+      "github_handle": "github_handle"
+    }
+  ]
+}
+```
+
+---
+
+## 🔍 Troubleshooting
+
+### Common Issues
+- **Setup Problems**: Run `just env-check` and `just verify-apis`
+- **API Issues**: Verify GitHub token has organization access
+- **Missing Data**: Check repository permissions
+- **Chart Errors**: Verify CSV file format and content
+
+### Getting Help
+- **Environment Check**: `just env-check`
+- **API Verification**: `just verify-apis`
+- **System Health**: Check logs with `just logs` (if available)
+
+---
+
+## 📈 System Features
+
+### Performance
+- **Git-Based Extraction**: 85-90% reduction in API calls
+- **Intelligent Caching**: Faster repeated extractions
+- **Local Processing**: No external AI services required
+- **Scales**: Handles 100+ repositories
+
+### Key Features
+- **Branch Tracking**: Shows only work merged to main/dev
+- **Developer Unification**: Consistent attribution across sources
+- **Flexible Timeframes**: Extract any date range (7, 30, 90+ days)
+- **High-Quality Output**: 300 DPI charts for presentations
 
 ---
 
@@ -219,13 +162,11 @@ just test-integration       # Validate API connections
 ### API Documentation
 - **[GitHub API](https://docs.github.com/en/rest)** - GitHub REST API reference
 - **[Linear API](https://developers.linear.app/docs/graphql/working-with-the-graphql-api)** - Linear GraphQL API guide
-- **[Anthropic Claude](https://docs.anthropic.com/claude/reference/getting-started-with-the-api)** - Claude API documentation
 
 ### Framework Dependencies
 - **[Just Command Runner](https://github.com/casey/just)** - Command automation tool
 - **[UV Package Manager](https://github.com/astral-sh/uv)** - Fast Python package manager
-- **[FastAPI](https://fastapi.tiangolo.com/)** - Modern Python web framework
 
 ---
 
-**🚀 Ready to get started?** Jump to the [Quick Start Guide](./setup/quick-start.md) or choose your role-specific path above.
+**🚀 Ready to get started?** Jump to the [README](../README.md) or [CHARTS_README](../CHARTS_README.md) to begin!

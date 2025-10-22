@@ -5,6 +5,7 @@ import logging
 import os
 import sys
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -188,30 +189,34 @@ class GitDataExtractor:
             try:
                 # Clone or update repository
                 repo_path = self.repo_service.clone_or_update_repo(org, repo, self.github_token)
-                
-                # Get last analyzed commit for incremental processing
-                last_commit = self.repo_service.get_last_analyzed_commit(org, repo)
-                
-                # Get commits since last analysis or since date
+
+                # CHANGED: Use get_commits_since to get ALL commits, not just PR merges
+                # Start from date, not last analyzed commit for full extraction
                 commits = self.repo_service.get_commits_since(
-                    repo_path, 
-                    since_commit=last_commit,
+                    repo_path,
+                    since_commit=None,  # Start from date, not last analyzed commit
                     since_date=since_date
                 )
-                
+
+                # Filter to main/dev branches only
+                main_branch_commits = [
+                    c for c in commits
+                    if c.get('on_main_branch', False)
+                ]
+
                 # Add repository name to each commit
-                for commit in commits:
+                for commit in main_branch_commits:
                     commit['repository'] = repo
                     commit['organization'] = org
-                
-                all_commits.extend(commits)
+
+                all_commits.extend(main_branch_commits)
                 
                 # Update last analyzed commit
-                if commits:
-                    latest_commit = commits[0]['sha']  # Commits are in reverse chronological order
+                if main_branch_commits:
+                    latest_commit = main_branch_commits[0]['sha']  # Commits are in reverse chronological order
                     self.repo_service.update_last_analyzed_commit(org, repo, latest_commit)
-                
-                logger.info(f"Extracted {len(commits)} commits from {repo}")
+
+                logger.info(f"Extracted {len(main_branch_commits)} commits from {repo}")
                 
             except ValidationError as e:
                 logger.error(f"Input validation failed for {repo}: {e}")
@@ -245,10 +250,10 @@ class GitDataExtractor:
             
             # Reorder columns to match expected format
             columns = [
-                'repository', 'sha', 'author_name', 'author_email', 'committer_name', 
+                'repository', 'sha', 'author_name', 'author_email', 'committer_name',
                 'committer_email', 'committed_date', 'message', 'url', 'pr_number',
-                'files_changed', 'additions', 'deletions', 'is_merge', 'co_authors',
-                'linear_ticket_id', 'ai_assisted'
+                'files_changed', 'additions', 'deletions', 'is_merge', 'on_main_branch',
+                'co_authors', 'linear_ticket_id', 'ai_assisted'
             ]
             
             # Only include columns that exist
@@ -262,83 +267,136 @@ class GitDataExtractor:
             return pd.DataFrame()
     
     def extract_pr_data(self, org: str, repos: List[str], days_back: int = 7) -> pd.DataFrame:
-        """Extract PR data using local git repositories + GitHub API metadata.
-        
+        """Extract PR data directly from GitHub API.
+
         Args:
             org: Organization name
             repos: List of repository names
             days_back: Number of days to go back
-            
+
         Returns:
             DataFrame with PR data
         """
         logger.info(f"Extracting PR data for {len(repos)} repositories ({days_back} days)")
-        
-        since_date = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
+
+        since_date = datetime.now(timezone.utc) - timedelta(days=days_back)
         all_prs = []
-        
+
         for repo in repos:
             try:
-                # Clone or update repository
-                repo_path = self.repo_service.clone_or_update_repo(org, repo, self.github_token)
-                
-                # Get PR merge commits from git
-                pr_commits = self.repo_service.get_pr_merge_commits(repo_path, since_date)
-                
-                if not pr_commits:
-                    logger.info(f"No PR commits found in {repo}")
-                    continue
-                
-                # Extract PR numbers
-                pr_numbers = [commit['pr_number'] for commit in pr_commits if commit['pr_number']]
-                
-                # Get PR metadata from GitHub API
-                pr_metadata = self.get_pr_metadata(org, repo, pr_numbers)
-                
-                # Combine git data with GitHub metadata
-                for commit in pr_commits:
-                    pr_number = commit['pr_number']
-                    if pr_number and pr_number in pr_metadata:
-                        metadata = pr_metadata[pr_number]
-                        
-                        pr_data = {
-                            'repository': repo,
-                            'pr_number': pr_number,
-                            'pr_id': f"{org}/{repo}#{pr_number}",
-                            'title': metadata['title'],
-                            'author': metadata['user_login'],
-                            'state': metadata['state'],
-                            'created_at': metadata['created_at'],
-                            'merged_at': metadata['merged_at'],
-                            'closed_at': metadata['closed_at'],
-                            'url': metadata['html_url'],
-                            'base_branch': metadata['base_ref'],
-                            'head_branch': metadata['head_ref'],
-                            'files_changed': commit['stats']['files_changed'],
-                            'additions': commit['stats']['insertions'],
-                            'deletions': commit['stats']['deletions'],
-                            'linear_ticket_id': commit['linear_ticket_id'] or ExtractionUtils.extract_linear_ticket_id(metadata['title'] + ' ' + metadata['body']),
-                            'merge_commit_sha': commit['sha'],
-                            'merge_commit_date': commit['committed_date'],
-                            'labels': ','.join(metadata['labels']),
-                            'assignees': ','.join(metadata['assignees']),
-                            'reviewers': ','.join(metadata['reviewers'])
-                        }
-                        
-                        # Add has_linear_ticket flag
-                        pr_data['has_linear_ticket'] = bool(pr_data['linear_ticket_id'])
-                        
-                        all_prs.append(pr_data)
-                
-                logger.info(f"Extracted {len(pr_commits)} PR commits from {repo}")
-                
+                # Get PRs directly from GitHub API
+                logger.info(f"Fetching PRs from {org}/{repo} via GitHub API")
+
+                # Get merged PRs using GitHub API
+                url = f"https://api.github.com/repos/{org}/{repo}/pulls"
+                params = {
+                    'state': 'closed',  # Get closed PRs
+                    'sort': 'updated',
+                    'direction': 'desc',
+                    'per_page': 100
+                }
+
+                page = 1
+                repo_prs = []
+
+                while True:
+                    params['page'] = page
+                    response = self.session.get(url, params=params)
+                    response.raise_for_status()
+
+                    prs = response.json()
+                    if not prs:
+                        break
+
+                    # Filter PRs by merge date
+                    for pr in prs:
+                        merged_at = pr.get('merged_at')
+                        if merged_at:
+                            merged_date = datetime.fromisoformat(merged_at.replace('Z', '+00:00'))
+                            if merged_date >= since_date:
+                                repo_prs.append(pr)
+                            else:
+                                # PRs are sorted by updated date, so stop if we hit old PRs
+                                break
+
+                    # Stop if we've gone past our date range
+                    if prs and not pr.get('merged_at'):
+                        # Check updated_at if no merged_at
+                        last_updated = datetime.fromisoformat(prs[-1]['updated_at'].replace('Z', '+00:00'))
+                        if last_updated < since_date:
+                            break
+
+                    if len(prs) < 100:
+                        break
+
+                    page += 1
+                    if page > 10:  # Safety limit
+                        break
+
+                # Fetch detailed PR information to get file statistics
+                logger.info(f"Fetching details for {len(repo_prs)} PRs from {repo}")
+                for pr in repo_prs:
+                    # Fetch individual PR to get file statistics
+                    pr_detail_url = f"https://api.github.com/repos/{org}/{repo}/pulls/{pr['number']}"
+                    try:
+                        pr_detail_response = self.session.get(pr_detail_url)
+                        pr_detail_response.raise_for_status()
+                        pr_detail = pr_detail_response.json()
+
+                        # Update PR with detailed file statistics
+                        pr['additions'] = pr_detail.get('additions', 0)
+                        pr['deletions'] = pr_detail.get('deletions', 0)
+                        pr['changed_files'] = pr_detail.get('changed_files', 0)
+
+                    except requests.exceptions.RequestException as e:
+                        logger.warning(f"Failed to fetch details for PR #{pr['number']}: {e}")
+                        # Keep defaults of 0 if detail fetch fails
+                        pass
+
+                # Process each PR
+                for pr in repo_prs:
+                    pr_data = {
+                        'repository': repo,
+                        'pr_number': str(pr['number']),
+                        'pr_id': f"{org}/{repo}#{pr['number']}",
+                        'title': pr.get('title', ''),
+                        'body': pr.get('body', ''),
+                        'author': pr.get('user', {}).get('login', ''),
+                        'state': 'merged' if pr.get('merged_at') else pr.get('state', ''),
+                        'created_at': pr.get('created_at', ''),
+                        'merged_at': pr.get('merged_at', ''),
+                        'closed_at': pr.get('closed_at', ''),
+                        'url': pr.get('html_url', ''),
+                        'base_branch': pr.get('base', {}).get('ref', ''),
+                        'head_branch': pr.get('head', {}).get('ref', ''),
+                        'files_changed': pr.get('changed_files', 0),
+                        'additions': pr.get('additions', 0),
+                        'deletions': pr.get('deletions', 0),
+                        'merge_commit_sha': pr.get('merge_commit_sha', ''),
+                        'labels': ','.join([label.get('name', '') for label in pr.get('labels', [])]),
+                        'assignees': ','.join([assignee.get('login', '') for assignee in pr.get('assignees', [])]),
+                    }
+
+                    # Extract Linear ticket ID from title or body
+                    pr_data['linear_ticket_id'] = ExtractionUtils.extract_linear_ticket_id(
+                        pr_data['title'] + ' ' + (pr_data['body'] or '')
+                    )
+                    pr_data['has_linear_ticket'] = bool(pr_data['linear_ticket_id'])
+
+                    all_prs.append(pr_data)
+
+                logger.info(f"Extracted {len(repo_prs)} PRs from {repo}")
+
             except ValidationError as e:
                 logger.error(f"Input validation failed for {repo}: {e}")
+                continue
+            except requests.exceptions.RequestException as e:
+                logger.error(f"API request failed for {org}/{repo}: {e}")
                 continue
             except Exception as e:
                 logger.error(f"Unexpected error extracting PRs from {repo}: {e}")
                 continue
-        
+
         # Convert to DataFrame
         if all_prs:
             df = pd.DataFrame(all_prs)
@@ -348,17 +406,19 @@ class GitDataExtractor:
             logger.warning("No PRs extracted")
             return pd.DataFrame()
     
-    def extract_organization_data(self, org: str, days_back: int = 7, 
-                                 output_commits: str = "org_commits.csv", 
-                                 output_prs: str = "org_prs.csv") -> Dict[str, Any]:
+    def extract_organization_data(self, org: str, days_back: int = 7,
+                                 output_commits: str = "org_commits.csv",
+                                 output_prs: str = "org_prs.csv",
+                                 incremental: bool = False) -> Dict[str, Any]:
         """Extract all data for an organization.
-        
+
         Args:
             org: Organization name
             days_back: Number of days to go back
             output_commits: Output file for commits
             output_prs: Output file for PRs
-            
+            incremental: If True, append only new data (deduplicate)
+
         Returns:
             Dictionary with extraction results
         """
@@ -375,15 +435,41 @@ class GitDataExtractor:
         
         # Extract commits data (git-based)
         commits_df = self.extract_commits_data(org, repo_names, days_back)
+        commits_added = 0
+        commits_deduped = 0
         if not commits_df.empty:
-            commits_df.to_csv(output_commits, index=False)
-            logger.info(f"Saved {len(commits_df)} commits to {output_commits}")
-        
+            if incremental and Path(output_commits).exists():
+                # Load existing and deduplicate
+                existing_commits = pd.read_csv(output_commits)
+                combined = pd.concat([existing_commits, commits_df])
+                deduped = combined.drop_duplicates(subset=['sha'], keep='first')
+                commits_added = len(deduped) - len(existing_commits)
+                commits_deduped = len(commits_df) - commits_added
+                deduped.to_csv(output_commits, index=False)
+                logger.info(f"Added {commits_added} new commits (deduped {commits_deduped}) to {output_commits}")
+            else:
+                commits_df.to_csv(output_commits, index=False)
+                commits_added = len(commits_df)
+                logger.info(f"Saved {len(commits_df)} commits to {output_commits}")
+
         # Extract PR data (git + GitHub API)
         prs_df = self.extract_pr_data(org, repo_names, days_back)
+        prs_added = 0
+        prs_deduped = 0
         if not prs_df.empty:
-            prs_df.to_csv(output_prs, index=False)
-            logger.info(f"Saved {len(prs_df)} PRs to {output_prs}")
+            if incremental and Path(output_prs).exists():
+                # Load existing and deduplicate by (number, repository)
+                existing_prs = pd.read_csv(output_prs)
+                combined = pd.concat([existing_prs, prs_df])
+                deduped = combined.drop_duplicates(subset=['number', 'repository'], keep='first')
+                prs_added = len(deduped) - len(existing_prs)
+                prs_deduped = len(prs_df) - prs_added
+                deduped.to_csv(output_prs, index=False)
+                logger.info(f"Added {prs_added} new PRs (deduped {prs_deduped}) to {output_prs}")
+            else:
+                prs_df.to_csv(output_prs, index=False)
+                prs_added = len(prs_df)
+                logger.info(f"Saved {len(prs_df)} PRs to {output_prs}")
         
         # Generate summary
         summary = {
@@ -395,8 +481,15 @@ class GitDataExtractor:
             'commits_file': output_commits,
             'prs_file': output_prs,
             'repos_file': repos_file,
-            'extraction_time': datetime.now(timezone.utc).isoformat()
+            'extraction_time': datetime.now(timezone.utc).isoformat(),
+            'incremental': incremental
         }
+
+        if incremental:
+            summary['commits_added'] = commits_added
+            summary['commits_deduped'] = commits_deduped
+            summary['prs_added'] = prs_added
+            summary['prs_deduped'] = prs_deduped
         
         # Calculate process compliance
         if not prs_df.empty:

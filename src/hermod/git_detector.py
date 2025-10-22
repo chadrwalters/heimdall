@@ -1,8 +1,14 @@
 """Git configuration detection for developer identification."""
 import json
+import logging
 import subprocess
 from pathlib import Path
 from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+# Git command timeout in seconds
+GIT_COMMAND_TIMEOUT_SECONDS = 5
 
 
 def get_git_user_email() -> str:
@@ -39,10 +45,18 @@ def get_git_user_name() -> Optional[str]:
             ["git", "config", "user.name"],
             capture_output=True,
             text=True,
-            check=True
+            check=True,
+            timeout=GIT_COMMAND_TIMEOUT_SECONDS
         )
         return result.stdout.strip()
-    except (subprocess.CalledProcessError, Exception):
+    except subprocess.CalledProcessError as e:
+        logger.debug(f"Git user.name not configured: {e}")
+        return None
+    except subprocess.TimeoutExpired:
+        logger.warning("Git command timeout when fetching user.name")
+        return None
+    except FileNotFoundError:
+        logger.error("Git not found in PATH")
         return None
 
 
@@ -87,6 +101,11 @@ def detect_developer() -> str:
 
     Raises:
         RuntimeError: If git is not configured
+
+    Example:
+        >>> developer = detect_developer()
+        >>> print(developer)
+        Chad
     """
     mappings = load_developer_mappings()
 
@@ -94,6 +113,7 @@ def detect_developer() -> str:
     email = get_git_user_email()
     canonical = mappings["email_to_canonical"].get(email.lower())
     if canonical:
+        logger.debug(f"Detected developer from email mapping: {canonical}")
         return canonical
 
     # Try git name
@@ -101,7 +121,10 @@ def detect_developer() -> str:
     if git_name:
         canonical = mappings["name_to_canonical"].get(git_name.lower())
         if canonical:
+            logger.debug(f"Detected developer from name mapping: {canonical}")
             return canonical
 
     # Fallback to email username
-    return email.split("@")[0]
+    fallback = email.split("@")[0]
+    logger.info(f"No mapping found, using email username as fallback: {fallback}")
+    return fallback

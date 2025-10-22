@@ -20,7 +20,7 @@
     },
     {
       "canonical_name": "Josh Park",
-      "git_names": ["jparkypark", "Joshua Park"],
+      "git_names": ["jparkypark", "Joshua Park", "JP"],
       "github_handles": ["jparkypark"],
       "linear_names": ["JP", "jparkypark", "josh.park@campusiq.com"]
     },
@@ -32,13 +32,13 @@
     },
     {
       "canonical_name": "Todd",
-      "git_names": ["Todd Hoffman", "toddahoffman"],
-      "github_handles": ["toddahoffman"],
+      "git_names": ["Todd Hoffman", "toddahoffman", "todd-a-hoffman"],
+      "github_handles": ["toddahoffman", "todd-a-hoffman"],
       "linear_names": ["Todd Hoffman"]
     },
     {
       "canonical_name": "Aaron",
-      "git_names": [],
+      "git_names": ["Aaron Benz"],
       "github_handles": [],
       "linear_names": ["Aaron", "aaron@degreeanalytics.com"]
     },
@@ -50,9 +50,21 @@
     },
     {
       "canonical_name": "Qasim",
-      "git_names": [],
+      "git_names": ["Qasim Iqbal"],
       "github_handles": [],
       "linear_names": ["Qasim", "qasim.iqbal@degreeanalytics.com"]
+    },
+    {
+      "canonical_name": "Kashyap",
+      "git_names": ["Kashyap Murali"],
+      "github_handles": [],
+      "linear_names": ["Kashyap"]
+    },
+    {
+      "canonical_name": "GitHub Actions",
+      "git_names": ["gpt-engineer-app[bot]"],
+      "github_handles": ["gpt-engineer-app[bot]"],
+      "linear_names": []
     }
   ]
 }

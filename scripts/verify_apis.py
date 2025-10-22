@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify API access to GitHub, Linear, and Anthropic services."""
+"""Verify API access to GitHub and Linear services."""
 
 import json
 import os
@@ -69,41 +69,6 @@ def verify_linear_api():
         return False
 
 
-def verify_anthropic_api():
-    """Verify Anthropic API access."""
-    print("\n🔍 Verifying Anthropic API access...")
-    try:
-        from anthropic import Anthropic
-
-        api_key = os.getenv("ANTHROPIC_API_KEY")
-        if not api_key:
-            print("❌ Anthropic API: No API key found in environment")
-            return False
-
-        client = Anthropic(api_key=api_key)
-
-        # Simple test message
-        response = client.messages.create(
-            model="claude-3-haiku-20240307",
-            max_tokens=10,
-            messages=[{"role": "user", "content": "Say 'API verified'"}],
-        )
-
-        if response and response.content:
-            print(f"✅ Anthropic API: Successfully connected - {response.content[0].text}")
-            return True
-        else:
-            print("❌ Anthropic API: Unexpected response")
-            return False
-
-    except ImportError as e:
-        print(f"❌ Anthropic API: Import error - {str(e)}")
-        return False
-    except Exception as e:
-        print(f"❌ Anthropic API: Error - {str(e)}")
-        return False
-
-
 def main():
     """Run all API verification tests."""
     print("=" * 50)
@@ -113,7 +78,6 @@ def main():
     results = {
         "GitHub": verify_github_api(),
         "Linear": verify_linear_api(),
-        "Anthropic": verify_anthropic_api(),
     }
 
     print("\n" + "=" * 50)

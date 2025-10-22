@@ -86,12 +86,12 @@ class TestConfigManager:
         with pytest.raises(DataValidationError):
             self.config_manager.save_ai_developers({"always_ai_developers": "not a list"})
 
-        # Developer missing required field
+        # Developer missing username (required field)
         with pytest.raises(DataValidationError):
             self.config_manager.save_ai_developers(
                 {
                     "always_ai_developers": [
-                        {"username": "test", "ai_tool": "claude", "percentage": 50}
+                        {"email": "test@test.com", "ai_tool": "claude", "percentage": 50}
                     ]
                 }
             )

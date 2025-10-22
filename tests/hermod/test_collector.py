@@ -1,11 +1,12 @@
 """Tests for AI usage data collection."""
 import pytest
+import subprocess
 from unittest.mock import patch, MagicMock
 from datetime import datetime
-from hermod.collector import collect_usage, save_submission
+from hermod.collector import collect_usage, save_submission, run_command, COMMAND_TIMEOUT_SECONDS
 
 
-def test_collect_usage_success():
+def test_collect_usage_success() -> None:
     """Test successful data collection."""
     with patch("hermod.collector.run_command") as mock_run:
         # Mock ccusage response
@@ -24,7 +25,7 @@ def test_collect_usage_success():
         assert data["codex"]["totals"]["totalCost"] == 2.00
 
 
-def test_collect_usage_handles_errors():
+def test_collect_usage_handles_errors() -> None:
     """Test collection continues when one tool fails."""
     with patch("hermod.collector.run_command") as mock_run:
         # First call succeeds, second fails
@@ -39,7 +40,7 @@ def test_collect_usage_handles_errors():
         assert data["codex"] == {}
 
 
-def test_save_submission():
+def test_save_submission() -> None:
     """Test saving submission to file."""
     import tempfile
     from pathlib import Path
@@ -62,3 +63,78 @@ def test_save_submission():
         with open(output_path) as f:
             loaded = json.load(f)
         assert loaded["metadata"]["developer"] == "Chad"
+
+
+def test_run_command_validates_allowed_commands() -> None:
+    """Test that only allowed commands can be run."""
+    with pytest.raises(ValueError, match="Command not allowed"):
+        run_command(["malicious-command", "--arg"])
+
+
+def test_run_command_validates_empty_command() -> None:
+    """Test that empty command list is rejected."""
+    with pytest.raises(ValueError, match="Command not allowed"):
+        run_command([])
+
+
+def test_run_command_validates_dangerous_arguments() -> None:
+    """Test that dangerous shell characters are rejected."""
+    dangerous_commands = [
+        ["ccusage", "daily", "; rm -rf /"],
+        ["ccusage", "daily", "| cat /etc/passwd"],
+        ["ccusage", "daily", "& background-task"],
+        ["ccusage", "daily", "$(malicious)"],
+        ["ccusage", "daily", "`whoami`"],
+    ]
+
+    for cmd in dangerous_commands:
+        with pytest.raises(ValueError, match="Invalid argument contains dangerous characters"):
+            run_command(cmd)
+
+
+def test_run_command_success() -> None:
+    """Test successful command execution."""
+    with patch("subprocess.run") as mock_run:
+        mock_result = MagicMock()
+        mock_result.stdout = '{"daily": [], "totals": {}}'
+        mock_run.return_value = mock_result
+
+        result = run_command(["ccusage", "daily", "--json"])
+
+        assert result == {"daily": [], "totals": {}}
+        mock_run.assert_called_once()
+        # Verify timeout is set
+        assert mock_run.call_args[1]["timeout"] == COMMAND_TIMEOUT_SECONDS
+
+
+def test_run_command_timeout() -> None:
+    """Test command timeout handling."""
+    with patch("subprocess.run") as mock_run:
+        mock_run.side_effect = subprocess.TimeoutExpired("ccusage", COMMAND_TIMEOUT_SECONDS)
+
+        result = run_command(["ccusage", "daily"])
+
+        assert result == {}
+
+
+def test_run_command_invalid_json() -> None:
+    """Test handling of invalid JSON response."""
+    with patch("subprocess.run") as mock_run:
+        mock_result = MagicMock()
+        mock_result.stdout = "not valid json"
+        mock_run.return_value = mock_result
+
+        result = run_command(["ccusage", "daily"])
+
+        assert result == {}
+
+
+def test_run_command_non_dict_response() -> None:
+    """Test validation rejects non-dict JSON responses."""
+    with patch("subprocess.run") as mock_run:
+        mock_result = MagicMock()
+        mock_result.stdout = '["list", "not", "dict"]'
+        mock_run.return_value = mock_result
+
+        with pytest.raises(ValueError, match="Expected dict response"):
+            run_command(["ccusage", "daily"])

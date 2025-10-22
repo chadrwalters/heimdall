@@ -1,5 +1,8 @@
 """Hermod CLI - AI usage collection tool."""
 import json
+import logging
+import os
+import re
 import sys
 from pathlib import Path
 from typing import Optional
@@ -12,6 +15,14 @@ from hermod import __version__
 from hermod.collector import collect_usage, save_submission
 from hermod.dependencies import check_all_dependencies
 from hermod.git_detector import detect_developer
+from hermod.logging_config import setup_logging
+
+# Initialize logging
+log_level = os.getenv("HERMOD_LOG_LEVEL", "WARNING")
+log_file = os.getenv("HERMOD_LOG_FILE")
+setup_logging(level=log_level, log_file=Path(log_file) if log_file else None)
+
+logger = logging.getLogger(__name__)
 
 app = typer.Typer(
     name="hermod",
@@ -19,6 +30,15 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console()
+
+# Input validation constants
+DEVELOPER_NAME_MIN_LENGTH = 1
+DEVELOPER_NAME_MAX_LENGTH = 100
+DAYS_MIN = 1
+DAYS_MAX = 365
+
+# Input validation patterns
+DEVELOPER_NAME_PATTERN = re.compile(rf'^[a-zA-Z0-9\s_-]{{{DEVELOPER_NAME_MIN_LENGTH},{DEVELOPER_NAME_MAX_LENGTH}}}$')
 
 
 def version_callback(value: bool):
@@ -56,6 +76,8 @@ def collect(
         "--days",
         "-n",
         help="Number of days to collect usage data for",
+        min=DAYS_MIN,
+        max=DAYS_MAX,
     ),
     json_output: bool = typer.Option(
         False,
@@ -64,6 +86,19 @@ def collect(
     ),
 ):
     """Collect AI usage data from ccusage and ccusage-codex."""
+    # Validate developer name if provided
+    if developer is not None:
+        if not DEVELOPER_NAME_PATTERN.match(developer):
+            error_msg = (
+                f"Invalid developer name. Must be {DEVELOPER_NAME_MIN_LENGTH}-{DEVELOPER_NAME_MAX_LENGTH} "
+                "characters and contain only letters, numbers, spaces, underscores, and hyphens."
+            )
+            if json_output:
+                console.print(json.dumps({"error": error_msg}))
+            else:
+                console.print(f"[red]Error:[/red] {error_msg}")
+            raise typer.Exit(code=1)
+
     # Check dependencies
     deps = check_all_dependencies()
     if not all(deps.values()):
@@ -86,6 +121,18 @@ def collect(
                 console.print(json.dumps({"error": f"Failed to detect developer: {e}"}))
             else:
                 console.print(f"[red]Error:[/red] Failed to detect developer: {e}")
+            raise typer.Exit(code=1)
+
+        # Validate auto-detected name as well
+        if not DEVELOPER_NAME_PATTERN.match(developer):
+            error_msg = (
+                f"Auto-detected developer name '{developer}' is invalid. "
+                "Please provide a valid name with --developer option."
+            )
+            if json_output:
+                console.print(json.dumps({"error": error_msg}))
+            else:
+                console.print(f"[red]Error:[/red] {error_msg}")
             raise typer.Exit(code=1)
 
     # Collect usage data

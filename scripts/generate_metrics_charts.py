@@ -124,9 +124,14 @@ class MetricsVisualizer:
                 # Calculate week start (Monday) and end (Sunday)
                 week_start = date - pd.Timedelta(days=date.weekday())
                 week_end = week_start + pd.Timedelta(days=6)
-                labels.append(f"{week_start.strftime('%b %d')}-{week_end.strftime('%d')}")
+                # Include month for week_end if it differs from week_start
+                if week_start.month == week_end.month:
+                    labels.append(f"{week_start.strftime('%b %d')}-{week_end.strftime('%d')}")
+                else:
+                    labels.append(f"{week_start.strftime('%b %d')}-{week_end.strftime('%b %d')}")
 
-            ax.set_xticks(range(len(dates)))
+            # Set ticks at actual datetime positions (not integers)
+            ax.set_xticks(dates)
             ax.set_xticklabels(labels, rotation=45, ha='right')
         else:
             # Daily data - use existing date formatting
@@ -189,6 +194,9 @@ class MetricsVisualizer:
             DataFrame with period, author, and count/sum columns
         """
         df = df.copy()
+        # NOTE: Period conversion drops timezone info - this is expected behavior.
+        # All input datetimes are UTC, and aggregations work correctly without
+        # explicit timezone tracking. See docs/charts-timezone-handling.md for details.
         df["period"] = df[date_col].dt.to_period(freq)
 
         if metric_col:
@@ -373,6 +381,9 @@ class MetricsVisualizer:
 
         # Filter to main branches
         main_commits = self._filter_main_branches(self.commits_df, "committed_date")
+
+        # Explicit copy to avoid SettingWithCopyWarning
+        main_commits = main_commits.copy()
 
         # Calculate size (additions + deletions)
         main_commits["size"] = main_commits["additions"] + main_commits["deletions"]
@@ -581,23 +592,29 @@ class MetricsVisualizer:
         started_df = cycle_df[
             (cycle_df["created_at"] >= cycle_df["cycle_start"]) &
             (cycle_df["created_at"] <= cycle_df["cycle_end"])
-        ]
+        ].copy()
         started_counts = (
             started_df.groupby(["cycle_number", "assignee_name"])
             .size()
             .reset_index(name="started")
         )
 
-        # Calculate completed issues per dev per cycle
-        # Count both "completed" and "canceled" as finished (canceled = done but not delivered)
-        completed_df = cycle_df[
-            (cycle_df["state_type"].isin(["completed", "canceled"])) &
+        # Calculate issues that were STARTED *AND* COMPLETED in same cycle
+        # This measures "Cycle Efficiency" - what % of started work got SHIPPED
+        # Only count "completed" (Done) - work actually SHIPPED to customers
+        # Exclude "canceled" (abandoned/deferred work that was NOT shipped)
+        started_and_completed_df = cycle_df[
+            # Started in cycle
+            (cycle_df["created_at"] >= cycle_df["cycle_start"]) &
+            (cycle_df["created_at"] <= cycle_df["cycle_end"]) &
+            # AND completed in cycle
+            (cycle_df["state_type"] == "completed") &
             (cycle_df["completed_at"].notna()) &
             (cycle_df["completed_at"] >= cycle_df["cycle_start"]) &
             (cycle_df["completed_at"] <= cycle_df["cycle_end"])
-        ]
+        ].copy()
         completed_counts = (
-            completed_df.groupby(["cycle_number", "assignee_name"])
+            started_and_completed_df.groupby(["cycle_number", "assignee_name"])
             .size()
             .reset_index(name="completed")
         )
@@ -610,7 +627,8 @@ class MetricsVisualizer:
             how="outer"
         ).fillna(0)
 
-        # Calculate completion rate
+        # Calculate Cycle Efficiency: (Started AND Completed) / Started * 100
+        # Always ≤100%, measures: "Did we finish what we started?"
         merged["completion_rate"] = (
             (merged["completed"] / merged["started"] * 100)
             .replace([float('inf'), -float('inf')], 0)
@@ -652,18 +670,16 @@ class MetricsVisualizer:
 
         # Configure axes
         ax.set_title(
-            "Cycle Completion Rate by Developer",
+            "Cycle Efficiency: % of Started Work SHIPPED to Customers",
             fontsize=16,
             fontweight="bold",
             pad=20
         )
         ax.set_xlabel("Cycle", fontsize=12)
-        ax.set_ylabel("Completion Rate (%)", fontsize=12)
-        # Dynamic Y-axis to accommodate completion rates >100%
-        # When teams complete carryover work, rates can exceed 100%
-        max_rate = pivot.max().max() if len(pivot) > 0 else 100
-        y_max = max(105, max_rate * 1.1)  # 10% headroom, minimum 105
-        ax.set_ylim(0, y_max)
+        ax.set_ylabel("Efficiency (%)", fontsize=12)
+        # Efficiency is always ≤100% (measures: started AND completed / started)
+        # Shows what % of work started in a cycle actually got DONE and SHIPPED
+        ax.set_ylim(0, 105)  # 5% headroom above 100%
         ax.set_xticks(pivot.index)
         ax.set_xticklabels([f"Cycle {num}" for num in pivot.index], rotation=45, ha='right', fontsize=10)
         ax.legend(title="Developer", bbox_to_anchor=(1.05, 1), loc="upper left")
@@ -771,9 +787,10 @@ class MetricsVisualizer:
                 )
 
             # Chart 3: Issues Completed (completed in cycle period)
-            # Count both "completed" and "canceled" as finished
+            # Only count "completed" (Done) - work actually SHIPPED to customers
+            # Exclude "canceled" (abandoned/deferred work that was NOT shipped)
             completed_df = valid_df[
-                (valid_df["state_type"].isin(["completed", "canceled"])) &
+                (valid_df["state_type"] == "completed") &
                 (valid_df["completed_at"].notna()) &
                 (valid_df["completed_at"] >= valid_df["cycle_start"]) &
                 (valid_df["completed_at"] <= valid_df["cycle_end"])

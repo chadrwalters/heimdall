@@ -1,6 +1,7 @@
 """Extract commits and file changes from git repositories."""
 
 import logging
+import subprocess
 from typing import Any, Dict, List, Optional
 
 import git
@@ -70,6 +71,7 @@ class CommitExtractor:
                     'committed_date': commit.committed_datetime.isoformat(),
                     'parents': [parent.hexsha for parent in commit.parents],
                     'is_merge': len(commit.parents) > 1,
+                    'on_main_branch': self.is_on_main_branch(repo_path, commit.hexsha),
                     'stats': {
                         'total': commit.stats.total,
                         'files': commit.stats.files,
@@ -241,3 +243,82 @@ class CommitExtractor:
         except Exception as e:
             logger.error(f"Unexpected error getting file changes for {commit_sha}: {e}")
             return []
+
+    def is_commit_on_branch(self, repo_path: str, commit_sha: str, branch_name: str) -> bool:
+        """Check if a commit is reachable from a specific branch.
+
+        Args:
+            repo_path: Path to local repository
+            commit_sha: Commit SHA to check
+            branch_name: Branch name to check against
+
+        Returns:
+            True if commit is on the branch, False otherwise
+        """
+        try:
+            result = subprocess.run(
+                ['git', 'branch', '--contains', commit_sha],
+                cwd=repo_path,
+                capture_output=True,
+                text=True,
+                check=False
+            )
+
+            if result.returncode != 0:
+                logger.warning(f"Git command failed for commit {commit_sha}: {result.stderr}")
+                return False
+
+            # Parse branch list - format is "  branch-name" or "* branch-name" for current
+            branches = [line.strip().lstrip('* ').strip() for line in result.stdout.split('\n') if line.strip()]
+            return branch_name in branches
+
+        except Exception as e:
+            logger.error(f"Error checking if commit {commit_sha} is on branch {branch_name}: {e}")
+            return False
+
+    def get_branches_for_commit(self, repo_path: str, commit_sha: str) -> List[str]:
+        """Get all branches that contain a specific commit.
+
+        Args:
+            repo_path: Path to local repository
+            commit_sha: Commit SHA to check
+
+        Returns:
+            List of branch names containing the commit
+        """
+        try:
+            result = subprocess.run(
+                ['git', 'branch', '--contains', commit_sha],
+                cwd=repo_path,
+                capture_output=True,
+                text=True,
+                check=False
+            )
+
+            if result.returncode != 0:
+                logger.warning(f"Git command failed for commit {commit_sha}: {result.stderr}")
+                return []
+
+            # Parse branch list - format is "  branch-name" or "* branch-name" for current
+            branches = [line.strip().lstrip('* ').strip() for line in result.stdout.split('\n') if line.strip()]
+            return branches
+
+        except Exception as e:
+            logger.error(f"Error getting branches for commit {commit_sha}: {e}")
+            return []
+
+    def is_on_main_branch(self, repo_path: str, commit_sha: str) -> bool:
+        """Check if a commit is on a main development branch (main, master, dev, develop).
+
+        Args:
+            repo_path: Path to local repository
+            commit_sha: Commit SHA to check
+
+        Returns:
+            True if commit is on any main branch, False otherwise
+        """
+        main_branches = ['main', 'master', 'dev', 'develop']
+        branches = self.get_branches_for_commit(repo_path, commit_sha)
+
+        # Check if any main branch is in the list
+        return any(branch in main_branches for branch in branches)

@@ -1,10 +1,11 @@
 """Tests for git configuration detection."""
 import pytest
+import subprocess
 from unittest.mock import patch, MagicMock
 from hermod.git_detector import detect_developer, get_git_user_email
 
 
-def test_get_git_user_email_success():
+def test_get_git_user_email_success() -> None:
     """Test extracting email from git config."""
     with patch("subprocess.run") as mock_run:
         mock_result = MagicMock()
@@ -22,7 +23,7 @@ def test_get_git_user_email_success():
         )
 
 
-def test_get_git_user_email_not_configured():
+def test_get_git_user_email_not_configured() -> None:
     """Test handling when git email is not configured."""
     import subprocess
     with patch("subprocess.run") as mock_run:
@@ -32,7 +33,7 @@ def test_get_git_user_email_not_configured():
             get_git_user_email()
 
 
-def test_detect_developer_from_git_name():
+def test_detect_developer_from_git_name() -> None:
     """Test detecting canonical name from git name."""
     with patch("hermod.git_detector.get_git_user_email", return_value="unknown@example.com"):
         with patch("subprocess.run") as mock_run:
@@ -45,18 +46,19 @@ def test_detect_developer_from_git_name():
             assert developer == "Chad"
 
 
-def test_detect_developer_from_email():
+def test_detect_developer_from_email() -> None:
     """Test detecting canonical name from git email."""
     with patch("hermod.git_detector.get_git_user_email", return_value="jeremiah@degreeanalytics.com"):
         developer = detect_developer()
         assert developer == "Jeremiah"
 
 
-def test_detect_developer_email_fallback():
+def test_detect_developer_email_fallback() -> None:
     """Test fallback when developer not found in mappings."""
     with patch("hermod.git_detector.get_git_user_email", return_value="unknown@example.com"):
         with patch("subprocess.run") as mock_run:
-            mock_run.side_effect = Exception("Git name not found")
+            # Raise CalledProcessError (one of the specific exceptions handled)
+            mock_run.side_effect = subprocess.CalledProcessError(1, ["git", "config", "user.name"])
 
             developer = detect_developer()
             assert developer == "unknown"  # Email username fallback

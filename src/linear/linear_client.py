@@ -371,13 +371,15 @@ class LinearClient:
     def get_cycles(
         self,
         team_key: str | None = None,
-        active_only: bool = False
+        active_only: bool = False,
+        limit: int = 100
     ) -> list[dict[str, Any]]:
         """Get cycles (sprints), optionally filtered by team.
 
         Args:
             team_key: Optional team key to filter cycles
             active_only: If True, only return active/upcoming cycles
+            limit: Number of results per page (default: 100)
 
         Returns:
             List of cycle dictionaries
@@ -392,83 +394,128 @@ class LinearClient:
             filters.append('isActive: { eq: true }')
 
         if filters:
-            filter_str = f'filter: {{ {", ".join(filters)} }}'
+            filter_str = f'filter: {{ {", ".join(filters)} }}, '
 
-        query = f"""
-        query {{
-            cycles({filter_str}, first: 100) {{
-                nodes {{
-                    id
-                    number
-                    name
-                    startsAt
-                    endsAt
-                    completedAt
-                    team {{
+        all_cycles = []
+        has_next_page = True
+        end_cursor = None
+
+        while has_next_page:
+            after_str = f', after: "{end_cursor}"' if end_cursor else ''
+
+            query = f"""
+            query {{
+                cycles({filter_str}first: {limit}{after_str}) {{
+                    nodes {{
                         id
-                        key
+                        number
                         name
+                        startsAt
+                        endsAt
+                        completedAt
+                        team {{
+                            id
+                            key
+                            name
+                        }}
+                        progress
                     }}
-                    progress
+                    pageInfo {{
+                        hasNextPage
+                        endCursor
+                    }}
                 }}
             }}
-        }}
-        """
+            """
 
-        result = self._execute_query(query)
-        cycles_data = result.get("cycles", {})
-        return cycles_data.get("nodes", [])
+            result = self._execute_query(query)
+            cycles_data = result.get("cycles", {})
+            nodes = cycles_data.get("nodes", [])
+            all_cycles.extend(nodes)
 
-    def get_cycle_issues(self, cycle_id: str) -> list[dict[str, Any]]:
+            # Check pagination
+            page_info = cycles_data.get("pageInfo", {})
+            has_next_page = page_info.get("hasNextPage", False)
+            end_cursor = page_info.get("endCursor")
+
+            if nodes:
+                logger.debug(f"Fetched {len(nodes)} cycles (total: {len(all_cycles)})")
+
+        return all_cycles
+
+    def get_cycle_issues(self, cycle_id: str, limit: int = 100) -> list[dict[str, Any]]:
         """Get all issues for a specific cycle.
 
         Args:
             cycle_id: Linear cycle ID
+            limit: Number of results per page (default: 100)
 
         Returns:
             List of issue dictionaries
         """
-        query = """
-        query GetCycleIssues($cycleId: String!) {
-            cycle(id: $cycleId) {
-                issues {
-                    nodes {
-                        id
-                        identifier
-                        title
-                        description
-                        state {
-                            id
-                            name
-                            type
-                        }
-                        assignee {
-                            id
-                            name
-                            email
-                        }
-                        createdAt
-                        updatedAt
-                        completedAt
-                        priority
-                        priorityLabel
-                        estimate
-                        team {
-                            id
-                            key
-                            name
-                        }
-                        url
-                    }
-                }
-            }
-        }
-        """
+        all_issues = []
+        has_next_page = True
+        end_cursor = None
 
-        result = self._execute_query(query, {"cycleId": cycle_id})
-        cycle_data = result.get("cycle", {})
-        issues_data = cycle_data.get("issues", {})
-        return issues_data.get("nodes", [])
+        while has_next_page:
+            after_str = f', after: "{end_cursor}"' if end_cursor else ''
+
+            query = f"""
+            query GetCycleIssues($cycleId: String!) {{
+                cycle(id: $cycleId) {{
+                    issues(first: {limit}{after_str}) {{
+                        nodes {{
+                            id
+                            identifier
+                            title
+                            description
+                            state {{
+                                id
+                                name
+                                type
+                            }}
+                            assignee {{
+                                id
+                                name
+                                email
+                            }}
+                            createdAt
+                            updatedAt
+                            completedAt
+                            priority
+                            priorityLabel
+                            estimate
+                            team {{
+                                id
+                                key
+                                name
+                            }}
+                            url
+                        }}
+                        pageInfo {{
+                            hasNextPage
+                            endCursor
+                        }}
+                    }}
+                }}
+            }}
+            """
+
+            result = self._execute_query(query, {"cycleId": cycle_id})
+            cycle_data = result.get("cycle", {})
+            issues_data = cycle_data.get("issues", {})
+            nodes = issues_data.get("nodes", [])
+            all_issues.extend(nodes)
+
+            # Check pagination
+            page_info = issues_data.get("pageInfo", {})
+            has_next_page = page_info.get("hasNextPage", False)
+            end_cursor = page_info.get("endCursor")
+
+            if nodes:
+                logger.debug(f"Fetched {len(nodes)} issues for cycle {cycle_id} (total: {len(all_issues)})")
+
+        return all_issues
 
     def clear_cache(self):
         """Clear the issue cache."""

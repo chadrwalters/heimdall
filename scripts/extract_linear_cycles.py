@@ -26,14 +26,34 @@ def extract_cycle_data(
     """
     print(f"Extracting Linear cycles for team: {team_key}")
 
-    # Initialize clients
-    client = LinearClient()
-    unifier = NameUnifier(name_config)
+    try:
+        # Initialize clients
+        client = LinearClient()
+        unifier = NameUnifier(name_config)
+    except Exception as e:
+        print(f"❌ Error initializing clients: {e}")
+        print("Please check your LINEAR_API_KEY environment variable and configuration files.")
+        sys.exit(1)
 
     # Get all cycles for team
     print("Fetching cycles...")
-    cycles = client.get_cycles(team_key=team_key)
-    print(f"  Found {len(cycles)} cycles")
+    try:
+        cycles = client.get_cycles(team_key=team_key)
+        if not cycles:
+            print(f"⚠️  No cycles found for team: {team_key}")
+            print("This could mean:")
+            print("  - The team key is incorrect")
+            print("  - The team has no cycles yet")
+            print("  - Your API key doesn't have access to this team")
+            return
+        print(f"  Found {len(cycles)} cycles")
+    except Exception as e:
+        print(f"❌ Error fetching cycles: {e}")
+        print("Please verify:")
+        print("  - Your Linear API key is valid")
+        print("  - The team key is correct")
+        print("  - You have access to this team's data")
+        sys.exit(1)
 
     # Extract issues for each cycle
     all_data = []
@@ -49,50 +69,74 @@ def extract_cycle_data(
         print(f"  Period: {cycle_start} to {cycle_end}")
 
         # Get issues for this cycle
-        issues = client.get_cycle_issues(cycle_id)
-        print(f"  Found {len(issues)} issues")
+        try:
+            issues = client.get_cycle_issues(cycle_id)
+            if not issues:
+                print(f"  ⚠️  No issues found in this cycle")
+                continue
+            print(f"  Found {len(issues)} issues")
+        except Exception as e:
+            print(f"  ❌ Error fetching issues for cycle {cycle_num}: {e}")
+            print(f"  Skipping this cycle and continuing...")
+            continue
 
         for issue in issues:
-            assignee_name = issue.get("assignee", {}).get("name") if issue.get("assignee") else None
-            if assignee_name:
-                assignee_name = unifier.unify(linear_name=assignee_name)
+            try:
+                assignee_name = issue.get("assignee", {}).get("name") if issue.get("assignee") else None
+                if assignee_name:
+                    assignee_name = unifier.unify(linear_name=assignee_name)
 
-            data = {
-                "cycle_id": cycle_id,
-                "cycle_number": cycle_num,
-                "cycle_name": cycle_name,
-                "cycle_start": cycle_start,
-                "cycle_end": cycle_end,
-                "issue_id": issue["id"],
-                "issue_identifier": issue["identifier"],
-                "issue_title": issue["title"],
-                "assignee_name": assignee_name,
-                "estimate": issue.get("estimate"),
-                "priority": issue.get("priority"),
-                "state_type": issue.get("state", {}).get("type"),
-                "state_name": issue.get("state", {}).get("name"),
-                "created_at": issue.get("createdAt"),
-                "completed_at": issue.get("completedAt"),
-            }
-            all_data.append(data)
+                data = {
+                    "cycle_id": cycle_id,
+                    "cycle_number": cycle_num,
+                    "cycle_name": cycle_name,
+                    "cycle_start": cycle_start,
+                    "cycle_end": cycle_end,
+                    "issue_id": issue["id"],
+                    "issue_identifier": issue["identifier"],
+                    "issue_title": issue["title"],
+                    "assignee_name": assignee_name,
+                    "estimate": issue.get("estimate"),
+                    "priority": issue.get("priority"),
+                    "state_type": issue.get("state", {}).get("type"),
+                    "state_name": issue.get("state", {}).get("name"),
+                    "created_at": issue.get("createdAt"),
+                    "completed_at": issue.get("completedAt"),
+                }
+                all_data.append(data)
+            except Exception as e:
+                print(f"  ⚠️  Error processing issue {issue.get('identifier', 'unknown')}: {e}")
+                print(f"  Skipping this issue and continuing...")
+                continue
 
     # Create DataFrame and save
-    df = pd.DataFrame(all_data)
-    df.to_csv(output_file, index=False)
+    if not all_data:
+        print("\n⚠️  No data extracted. No output file created.")
+        print("Please check the warnings above for details.")
+        return
 
-    print(f"\n✅ Saved {len(all_data)} cycle issues to: {output_file}")
+    try:
+        df = pd.DataFrame(all_data)
+        df.to_csv(output_file, index=False)
+        print(f"\n✅ Saved {len(all_data)} cycle issues to: {output_file}")
+    except Exception as e:
+        print(f"\n❌ Error saving to CSV: {e}")
+        sys.exit(1)
 
     # Print summary
     if len(df) > 0:
         print("\nSummary by Cycle:")
-        summary = df.groupby(["cycle_number", "cycle_name"]).agg({
-            "issue_identifier": "count",
-            "estimate": "sum"
-        }).rename(columns={
-            "issue_identifier": "issue_count",
-            "estimate": "total_estimate"
-        })
-        print(summary)
+        try:
+            summary = df.groupby(["cycle_number", "cycle_name"]).agg({
+                "issue_identifier": "count",
+                "estimate": "sum"
+            }).rename(columns={
+                "issue_identifier": "issue_count",
+                "estimate": "total_estimate"
+            })
+            print(summary)
+        except Exception as e:
+            print(f"⚠️  Error generating summary: {e}")
 
 
 if __name__ == "__main__":

@@ -91,6 +91,19 @@ class GraphQLValidator:
             "targetDate",
             "status",
             "health",
+            # Cycle-specific fields
+            "startsAt",
+            "endsAt",
+            "priorityLabel",
+            "email",
+            "type",
+            "lead",
+            "nodes",
+            "first",
+            "filter",
+            "eq",
+            "isActive",
+            "position",
         },
     }
 
@@ -208,6 +221,11 @@ class GraphQLValidator:
         allowed_all = cls.ALLOWED_LINEAR_FIELDS["query"] | cls.ALLOWED_LINEAR_FIELDS["fields"]
 
         for field in fields:
+            # Skip query/mutation/subscription operation names (e.g., "query GetIssue")
+            # These will start with capital letter after the operation keyword
+            if field[0].isupper():
+                continue
+
             if field not in allowed_all and not field.startswith(
                 tuple(cls.ALLOWED_LINEAR_FIELDS["query"])
             ):
@@ -219,6 +237,9 @@ class GraphQLValidator:
                     "hasNextPage",
                     "hasPreviousPage",
                     "cursor",
+                    "query",  # GraphQL operation keyword
+                    "mutation",  # GraphQL operation keyword
+                    "subscription",  # GraphQL operation keyword
                 }:
                     raise ValidationError(f"Field not allowed: {field}")
 

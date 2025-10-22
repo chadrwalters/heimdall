@@ -368,6 +368,108 @@ class LinearClient:
         states_data = result.get("workflowStates", {})
         return states_data.get("nodes", [])
 
+    def get_cycles(
+        self,
+        team_key: str | None = None,
+        active_only: bool = False
+    ) -> list[dict[str, Any]]:
+        """Get cycles (sprints), optionally filtered by team.
+
+        Args:
+            team_key: Optional team key to filter cycles
+            active_only: If True, only return active/upcoming cycles
+
+        Returns:
+            List of cycle dictionaries
+        """
+        filter_str = ""
+        filters = []
+
+        if team_key:
+            filters.append(f'team: {{ key: {{ eq: "{team_key}" }} }}')
+
+        if active_only:
+            filters.append('isActive: { eq: true }')
+
+        if filters:
+            filter_str = f'filter: {{ {", ".join(filters)} }}'
+
+        query = f"""
+        query {{
+            cycles({filter_str}, first: 100) {{
+                nodes {{
+                    id
+                    number
+                    name
+                    startsAt
+                    endsAt
+                    completedAt
+                    team {{
+                        id
+                        key
+                        name
+                    }}
+                    progress
+                }}
+            }}
+        }}
+        """
+
+        result = self._execute_query(query)
+        cycles_data = result.get("cycles", {})
+        return cycles_data.get("nodes", [])
+
+    def get_cycle_issues(self, cycle_id: str) -> list[dict[str, Any]]:
+        """Get all issues for a specific cycle.
+
+        Args:
+            cycle_id: Linear cycle ID
+
+        Returns:
+            List of issue dictionaries
+        """
+        query = """
+        query GetCycleIssues($cycleId: String!) {
+            cycle(id: $cycleId) {
+                issues {
+                    nodes {
+                        id
+                        identifier
+                        title
+                        description
+                        state {
+                            id
+                            name
+                            type
+                        }
+                        assignee {
+                            id
+                            name
+                            email
+                        }
+                        createdAt
+                        updatedAt
+                        completedAt
+                        priority
+                        priorityLabel
+                        estimate
+                        team {
+                            id
+                            key
+                            name
+                        }
+                        url
+                    }
+                }
+            }
+        }
+        """
+
+        result = self._execute_query(query, {"cycleId": cycle_id})
+        cycle_data = result.get("cycle", {})
+        issues_data = cycle_data.get("issues", {})
+        return issues_data.get("nodes", [])
+
     def clear_cache(self):
         """Clear the issue cache."""
         self.get_issue_cached.cache_clear()

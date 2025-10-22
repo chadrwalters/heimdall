@@ -39,7 +39,7 @@ def load_submissions(submissions_dir: Path) -> List[Dict[str, Any]]:
         try:
             with open(json_file) as f:
                 data = json.load(f)
-                data['_source_file'] = json_file.name
+                data["_source_file"] = json_file.name
                 submissions.append(data)
         except Exception as e:
             print(f"⚠️  Error loading {json_file.name}: {e}")
@@ -62,79 +62,81 @@ def deduplicate_data(submissions: List[Dict[str, Any]]) -> Dict[str, Dict[str, D
     deduplicated: Dict[str, Dict[str, Dict[str, Any]]] = defaultdict(lambda: defaultdict(dict))
 
     stats = {
-        'total_submissions': len(submissions),
-        'claude_code_entries': 0,
-        'codex_entries': 0,
-        'duplicates_removed': 0
+        "total_submissions": len(submissions),
+        "claude_code_entries": 0,
+        "codex_entries": 0,
+        "duplicates_removed": 0,
     }
 
     for submission in submissions:
         try:
-            developer = submission['metadata']['developer']
-            collected_at = datetime.fromisoformat(submission['metadata']['collected_at'])
+            developer = submission["metadata"]["developer"]
+            collected_at = datetime.fromisoformat(submission["metadata"]["collected_at"])
 
             # Process Claude Code data
-            claude_data = submission.get('claude_code', {})
-            if claude_data and 'daily' in claude_data:
-                for day_entry in claude_data['daily']:
-                    date = day_entry['date']
-                    key = (developer, date, 'claude_code')
+            claude_data = submission.get("claude_code", {})
+            if claude_data and "daily" in claude_data:
+                for day_entry in claude_data["daily"]:
+                    date = day_entry["date"]
 
                     # Check if we already have this entry
-                    if 'claude_code' in deduplicated[developer].get(date, {}):
-                        existing_timestamp = deduplicated[developer][date]['claude_code']['_collected_at']
+                    if "claude_code" in deduplicated[developer].get(date, {}):
+                        existing_timestamp = deduplicated[developer][date]["claude_code"][
+                            "_collected_at"
+                        ]
                         if collected_at > existing_timestamp:
                             # This submission is newer, replace
-                            deduplicated[developer][date]['claude_code'] = {
-                                'data': day_entry,
-                                '_collected_at': collected_at,
-                                '_source_file': submission['_source_file']
+                            deduplicated[developer][date]["claude_code"] = {
+                                "data": day_entry,
+                                "_collected_at": collected_at,
+                                "_source_file": submission["_source_file"],
                             }
-                            stats['duplicates_removed'] += 1
+                            stats["duplicates_removed"] += 1
                         else:
                             # Keep existing (it's newer)
-                            stats['duplicates_removed'] += 1
+                            stats["duplicates_removed"] += 1
                     else:
                         # First entry for this key
-                        deduplicated[developer][date]['claude_code'] = {
-                            'data': day_entry,
-                            '_collected_at': collected_at,
-                            '_source_file': submission['_source_file']
+                        deduplicated[developer][date]["claude_code"] = {
+                            "data": day_entry,
+                            "_collected_at": collected_at,
+                            "_source_file": submission["_source_file"],
                         }
-                        stats['claude_code_entries'] += 1
+                        stats["claude_code_entries"] += 1
 
             # Process Codex data
-            codex_data = submission.get('codex', {})
-            if codex_data and 'daily' in codex_data:
-                for day_entry in codex_data['daily']:
-                    date = day_entry['date']
-                    key = (developer, date, 'codex')
+            codex_data = submission.get("codex", {})
+            if codex_data and "daily" in codex_data:
+                for day_entry in codex_data["daily"]:
+                    date = day_entry["date"]
 
                     # Check if we already have this entry
-                    if 'codex' in deduplicated[developer].get(date, {}):
-                        existing_timestamp = deduplicated[developer][date]['codex']['_collected_at']
+                    if "codex" in deduplicated[developer].get(date, {}):
+                        existing_timestamp = deduplicated[developer][date]["codex"]["_collected_at"]
                         if collected_at > existing_timestamp:
                             # This submission is newer, replace
-                            deduplicated[developer][date]['codex'] = {
-                                'data': day_entry,
-                                '_collected_at': collected_at,
-                                '_source_file': submission['_source_file']
+                            deduplicated[developer][date]["codex"] = {
+                                "data": day_entry,
+                                "_collected_at": collected_at,
+                                "_source_file": submission["_source_file"],
                             }
-                            stats['duplicates_removed'] += 1
+                            stats["duplicates_removed"] += 1
                         else:
                             # Keep existing (it's newer)
-                            stats['duplicates_removed'] += 1
+                            stats["duplicates_removed"] += 1
                     else:
                         # First entry for this key
-                        deduplicated[developer][date]['codex'] = {
-                            'data': day_entry,
-                            '_collected_at': collected_at,
-                            '_source_file': submission['_source_file']
+                        deduplicated[developer][date]["codex"] = {
+                            "data": day_entry,
+                            "_collected_at": collected_at,
+                            "_source_file": submission["_source_file"],
                         }
-                        stats['codex_entries'] += 1
+                        stats["codex_entries"] += 1
 
         except Exception as e:
-            print(f"⚠️  Error processing submission {submission.get('_source_file', 'unknown')}: {e}")
+            print(
+                f"⚠️  Error processing submission {submission.get('_source_file', 'unknown')}: {e}"
+            )
             continue
 
     return deduplicated, stats
@@ -155,41 +157,37 @@ def write_ingested_data(deduplicated: Dict, output_dir: Path) -> None:
 
         # Convert to serializable format and sort by date
         output_data = {
-            'developer': developer,
-            'ingested_at': datetime.now().isoformat(),
-            'days': []
+            "developer": developer,
+            "ingested_at": datetime.now().isoformat(),
+            "days": [],
         }
 
         for date in sorted(dates.keys()):
-            day_data = {
-                'date': date,
-                'claude_code': None,
-                'codex': None
-            }
+            day_data = {"date": date, "claude_code": None, "codex": None}
 
-            if 'claude_code' in dates[date]:
-                entry = dates[date]['claude_code']
-                day_data['claude_code'] = {
-                    **entry['data'],
-                    '_metadata': {
-                        'collected_at': entry['_collected_at'].isoformat(),
-                        'source_file': entry['_source_file']
-                    }
+            if "claude_code" in dates[date]:
+                entry = dates[date]["claude_code"]
+                day_data["claude_code"] = {
+                    **entry["data"],
+                    "_metadata": {
+                        "collected_at": entry["_collected_at"].isoformat(),
+                        "source_file": entry["_source_file"],
+                    },
                 }
 
-            if 'codex' in dates[date]:
-                entry = dates[date]['codex']
-                day_data['codex'] = {
-                    **entry['data'],
-                    '_metadata': {
-                        'collected_at': entry['_collected_at'].isoformat(),
-                        'source_file': entry['_source_file']
-                    }
+            if "codex" in dates[date]:
+                entry = dates[date]["codex"]
+                day_data["codex"] = {
+                    **entry["data"],
+                    "_metadata": {
+                        "collected_at": entry["_collected_at"].isoformat(),
+                        "source_file": entry["_source_file"],
+                    },
                 }
 
-            output_data['days'].append(day_data)
+            output_data["days"].append(day_data)
 
-        with open(developer_file, 'w') as f:
+        with open(developer_file, "w") as f:
             json.dump(output_data, f, indent=2)
 
         print(f"   📝 {developer}: {len(output_data['days'])} days → {developer_file.name}")

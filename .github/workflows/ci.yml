@@ -26,11 +26,15 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Run Ruff linter
-        run: uv run ruff check .
+      - name: Install Just
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
 
-      - name: Run Ruff formatter check
-        run: uv run ruff format --check .
+      - name: Run linter via justfile
+        run: just quality lint
+
+      - name: Run formatter check via justfile
+        run: just quality format-check
 
   pre-commit:
     name: Pre-commit Hooks
@@ -77,8 +81,12 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
+      - name: Install Just
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
+
       - name: Run tests with coverage
-        run: uv run pytest tests/ -v --cov=src --cov-report=xml --cov-report=term
+        run: just test coverage
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -109,8 +117,12 @@ jobs:
       - name: Install mypy
         run: uv pip install mypy
 
-      - name: Run mypy
-        run: uv run mypy src --ignore-missing-imports
+      - name: Install Just
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
+
+      - name: Run mypy via justfile
+        run: just quality type-check
         continue-on-error: true  # Don't fail CI on type errors initially
 
   security:
@@ -134,5 +146,9 @@ jobs:
       - name: Install bandit
         run: uv pip install "bandit[toml]"
 
-      - name: Run bandit security scan
-        run: uv run bandit -c pyproject.toml -r src/
+      - name: Install Just
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
+
+      - name: Run bandit security scan via justfile
+        run: just quality security

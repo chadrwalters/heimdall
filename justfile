@@ -108,13 +108,17 @@ help:
     @echo "  just test github          GitHub integration tests"
     @echo "  just test linear          Linear integration tests"
     @echo "  just test extraction      Extraction pipeline tests"
+    @echo "  just test coverage        Tests with XML coverage (for CI)"
     @echo ""
     @echo "✨ QUALITY - Code Quality:"
-    @echo "  just quality lint         Lint with ruff"
-    @echo "  just quality format       Format with ruff"
-    @echo "  just quality typecheck    Type check with mypy"
-    @echo "  just quality check        All quality checks"
-    @echo "  just quality coverage     Coverage report"
+    @echo "  just quality lint              Lint with ruff"
+    @echo "  just quality format            Format with ruff"
+    @echo "  just quality format-check      Check formatting (no changes)"
+    @echo "  just quality typecheck         Type check with mypy"
+    @echo "  just quality type-check        Type check with mypy (CI alias)"
+    @echo "  just quality security          Security scan with bandit"
+    @echo "  just quality check             All quality checks"
+    @echo "  just quality coverage          Coverage report"
     @echo ""
     @echo "💾 CACHE - Cache Management:"
     @echo "  just cache status         Show cache statistics (API + Git)"
@@ -533,6 +537,11 @@ test-extraction:
     @echo "📊 Testing extraction pipeline..."
     @./scripts/test_extraction.sh
 
+# Run tests with coverage (for CI)
+test-coverage:
+    @echo "🧪 Running tests with coverage report..."
+    @uv run python -m pytest tests/ -v --cov=src --cov-report=xml --cov-report=term
+
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                          QUALITY - Code Quality Checks                      ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
@@ -568,6 +577,21 @@ quality-coverage:
     @echo "📊 Generating coverage report..."
     @uv run python -m pytest tests/ --cov=src --cov-report=html --cov-report=term-missing
     @echo "📈 Coverage report: htmlcov/index.html"
+
+# Format check (don't modify files)
+quality-format-check:
+    @echo "🔍 Checking code formatting..."
+    @uv run python -m ruff format --check src/ tests/ scripts/
+
+# Type checking with mypy
+quality-type-check:
+    @echo "🔍 Type checking with mypy..."
+    @uv run python -m mypy src/ --ignore-missing-imports
+
+# Security scanning with bandit
+quality-security:
+    @echo "🔒 Running security scan with bandit..."
+    @uv run python -m bandit -c pyproject.toml -r src/
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                        CACHE - Cache Management (Unified)                   ║

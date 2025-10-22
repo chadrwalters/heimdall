@@ -47,8 +47,15 @@ Choose your path based on your role and immediate needs:
 - **[Linear Integration Summary](./linear-integration-summary.md)** - Optional Linear ticket correlation
 
 ### Development
+- **[Justfile Reference](../justfile)** - All available commands (`just --list`)
 - **[Justfile Usage](./justfile-usage.md)** - Command reference and automation
 - **[Justfile Implementation](./justfile-implementation.md)** - Command implementation details
+
+### Developer Experience
+- **[Claude Commands](../.claude/README.md)** - AI-assisted workflows
+- **[Graphite Workflow Guide](./graphite-workflow.md)** - Stacked PR development
+- **[Testing & Debugging](./testing-guide.md)** - Test strategy and debugging
+- **[CI/CD Pipeline](../.github/workflows/ci.yml)** - Automated quality checks
 
 ---
 
@@ -96,6 +103,21 @@ just test-integration      # API integration tests
 - **PR Charts**: Daily/weekly PR counts and lines changed
 - **CSV Data**: Raw extracted data for custom analysis
 - **High-Res Charts**: 300 DPI PNG files for presentations
+
+---
+
+## 🏗️ Architecture
+
+Heimdall is a comprehensive framework with multiple components:
+
+- **Heimdall (Core)**: Engineering observability framework for tracking productivity
+- **Hermod (CLI)**: AI usage tracking and metrics collection (coming soon)
+- **Integration Layer**: GitHub, Linear, and Anthropic API connectors
+
+All components use:
+- **Justfile**: Unified command interface (`just --list`)
+- **UV**: Fast Python package management
+- **Claude Commands**: AI-assisted development workflows
 
 ---
 

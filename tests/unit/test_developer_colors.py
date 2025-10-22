@@ -43,3 +43,18 @@ def test_colors_are_consistent_across_instances():
     color2 = mapper2.get_color("Chad Walters")
 
     assert color1 == color2
+
+
+def test_no_color_collisions_for_known_developers():
+    """Test that all known developers have unique colors (no hash collisions)."""
+    mapper = DeveloperColorMapper("config/developer_names.json")
+
+    # Get colors for all known developers
+    known_developers = ["Chad Walters", "EJ", "Jeremiah", "JP", "Matt Kindy"]
+    colors = [mapper.get_color(dev) for dev in known_developers]
+
+    # Verify all colors are unique (no collisions)
+    assert len(colors) == len(set(colors)), (
+        f"Color collision detected! {len(known_developers)} developers "
+        f"but only {len(set(colors))} unique colors: {dict(zip(known_developers, colors))}"
+    )

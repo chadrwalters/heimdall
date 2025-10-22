@@ -68,7 +68,10 @@ help:
     @echo "  just chart all <commits> <prs> <cycles> [output=charts]  Generate all charts (with cycles)"
     @echo ""
     @echo "🤖 AI-USAGE - AI Usage Tracking:"
-    @echo "  just ai-usage collect <developer> [days=7]  Collect ccusage + codex data"
+    @echo "  just ai-usage collect <developer> [days=7]     Collect ccusage + codex data"
+    @echo "  just ai-usage ingest                            Ingest submissions with deduplication"
+    @echo "  just ai-usage charts [output=charts]            Generate cost/token charts"
+    @echo "  just ai-usage pipeline <dev> [days=7] [output]  Complete pipeline (collect→ingest→chart)"
     @echo ""
     @echo "🧪 TEST - Testing Operations:"
     @echo "  just test all             All tests with coverage"
@@ -283,6 +286,22 @@ ai-usage command *args:
 ai-usage-collect developer days="7":
     @echo "📊 Collecting AI usage for {{developer}} (last {{days}} days)..."
     @uv run python scripts/collect_ai_usage.py {{developer}} {{days}}
+
+# Ingest submitted AI usage data with deduplication
+ai-usage-ingest:
+    @echo "📥 Ingesting AI usage submissions..."
+    @uv run python scripts/ingest_ai_usage.py
+
+# Generate AI usage charts (daily/weekly cost and tokens)
+ai-usage-charts output="charts":
+    @echo "📊 Generating AI usage charts..."
+    @uv run python scripts/generate_ai_usage_charts.py data/ai_usage/ingested {{output}}
+
+# Complete pipeline: collect → ingest → charts (for testing with sample data)
+ai-usage-pipeline developer days="7" output="charts":
+    @just ai-usage-collect {{developer}} {{days}}
+    @just ai-usage-ingest
+    @just ai-usage-charts {{output}}
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                            TEST - Testing Operations                         ║

@@ -55,6 +55,11 @@ help:
     @echo "  just chart metrics <csv> <csv>       Generate metrics charts"
     @echo "  just ai-usage collect [dev] [days=7] Track AI usage (auto-detects dev)"
     @echo ""
+    @echo "🔀 PR - Pull Request Operations:"
+    @echo "  just pr request-review [args]         Request PR review with AI context"
+    @echo "  just pr enhance [args]                Enhance PR description with AI"
+    @echo "  just pr last-review <command> [args]  Show last PR review"
+    @echo ""
     @echo "📊 EXTRACT - Data Extraction:"
     @echo "  just extract github <org> [days=7]          Extract GitHub commits + PRs"
     @echo "  just extract github-commits <org> [days=30] Extract commits only"
@@ -201,6 +206,26 @@ env-fresh-start:
     @just env-clean
     @just env-setup
     @echo "✅ Fresh start complete"
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                          PR - Pull Request Operations                       ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+# PR command dispatcher
+pr command *args:
+    @just pr-{{command}} {{args}}
+
+# Request PR reviews with AI-generated context
+pr-request-review *args:
+    @huginn pr request-review {{args}}
+
+# Enhance PR description with AI analysis
+pr-enhance *args:
+    @huginn pr enhance {{args}}
+
+# Show last PR review
+pr-last-review command *args:
+    @huginn pr-last-review {{command}} {{args}}
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                          EXTRACT - Data Extraction                          ║

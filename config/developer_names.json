@@ -1,0 +1,34 @@
+{
+  "developers": [
+    {
+      "canonical_name": "Chad Walters",
+      "git_names": ["Chad Walters", "chadrwalters"],
+      "github_handles": ["chadrwalters"],
+      "linear_names": ["Chad Walters"]
+    },
+    {
+      "canonical_name": "EJ",
+      "git_names": ["ejhg", "Eugene", "Eugene De Hoyos"],
+      "github_handles": ["ejhg"],
+      "linear_names": ["EJ", "ejhg"]
+    },
+    {
+      "canonical_name": "Jeremiah",
+      "git_names": ["jeremiahdegreeanalytics", "Jeremiah Smith"],
+      "github_handles": ["jeremiahdegreeanalytics"],
+      "linear_names": ["Jeremiah"]
+    },
+    {
+      "canonical_name": "JP",
+      "git_names": ["jparkypark", "Joshua Park"],
+      "github_handles": ["jparkypark"],
+      "linear_names": ["JP", "jparkypark"]
+    },
+    {
+      "canonical_name": "Matt Kindy",
+      "git_names": ["mattkindy", "Matt Kindy"],
+      "github_handles": ["mattkindy"],
+      "linear_names": ["Matt Kindy", "mattkindy"]
+    }
+  ]
+}

@@ -14,6 +14,9 @@ def test_get_commits_since_includes_all_main_branch_commits(tmp_path):
     repo.index.add(["file1.txt"])
     _commit1 = repo.index.commit("Direct commit to main")  # noqa: F841
 
+    # Ensure we're on 'main' branch (git init default branch varies)
+    repo.git.branch("-M", "main")
+
     # Create feature branch with PR merge
     repo.git.checkout("-b", "feature")
     (tmp_path / "file2.txt").write_text("feature")

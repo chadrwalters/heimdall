@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Test Linear tickets extraction separately."""
 
-import sys
 import os
+import sys
 from pathlib import Path
 
 # Add src to path

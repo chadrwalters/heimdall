@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """Test GitHub PRs extraction separately."""
 
-import sys
 import os
+import sys
 from pathlib import Path
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from git_extraction.git_extractor import GitDataExtractor
 from git_extraction.config import GitExtractionConfig
+from git_extraction.git_extractor import GitDataExtractor
 
 
 def main():
@@ -32,7 +32,7 @@ def main():
     repos = extractor.get_organization_repos(org)
     print(f"Found {len(repos)} repositories")
 
-    print(f"\nExtracting PRs from first 3 repos for testing...")
+    print("\nExtracting PRs from first 3 repos for testing...")
     # repos is a list of dicts, get names
     repo_names = [r if isinstance(r, str) else r["name"] for r in repos[:3]]
     print(f"Test repos: {', '.join(repo_names)}")
@@ -43,7 +43,7 @@ def main():
     print(f"Columns: {list(prs_df.columns)}")
 
     if len(prs_df) > 0:
-        print(f"\nSample PR:")
+        print("\nSample PR:")
         print(prs_df[["repository", "title", "author", "state", "merged_at"]].head(1).to_string())
         print(f"\nMerged PRs: {prs_df['state'].value_counts().get('closed', 0)}")
     else:

@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Extract ALL merged PRs using GitHub API directly (not git merge commits)."""
 
+import json
 import os
 import sys
 from datetime import datetime, timedelta, timezone
-import json
-import requests
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
+import requests
 
 
 def get_all_merged_prs(org: str, repo: str, since_date: str, github_token: str) -> list:

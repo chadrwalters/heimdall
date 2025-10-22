@@ -109,6 +109,37 @@ class MetricsVisualizer:
 
         return df
 
+    def _format_week_axis(self, ax, dates, num_points):
+        """Format x-axis to show week ranges for weekly data.
+
+        Args:
+            ax: Matplotlib axis object
+            dates: DatetimeIndex of dates
+            num_points: Number of data points
+        """
+        if num_points <= 10:
+            # Weekly data - show week ranges
+            labels = []
+            for date in dates:
+                # Calculate week start (Monday) and end (Sunday)
+                week_start = date - pd.Timedelta(days=date.weekday())
+                week_end = week_start + pd.Timedelta(days=6)
+                labels.append(f"{week_start.strftime('%b %d')}-{week_end.strftime('%d')}")
+
+            ax.set_xticks(range(len(dates)))
+            ax.set_xticklabels(labels, rotation=45, ha='right')
+        else:
+            # Daily data - use existing date formatting
+            if num_points <= 7:
+                ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
+                ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
+            elif num_points <= 31:
+                interval = max(1, num_points // 10)
+                ax.xaxis.set_major_locator(mdates.DayLocator(interval=interval))
+                ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
+            else:
+                ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
+
     def _filter_main_branches(
         self, df: pd.DataFrame, date_col: str
     ) -> pd.DataFrame:
@@ -227,21 +258,23 @@ class MetricsVisualizer:
         # Dynamic date formatting based on number of data points
         num_points = len(pivot.index)
 
-        if num_points <= 7:
-            # Daily data for a week or less
-            ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
-            ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
-        elif num_points <= 10:
-            # Could be weekly data (4-5 weeks) or daily data for ~10 days
-            ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
-        elif num_points <= 31:
-            # Daily data for a month
-            interval = max(1, num_points // 10)
-            ax.xaxis.set_major_locator(mdates.DayLocator(interval=interval))
-            ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
+        # Determine if this is weekly or daily data
+        freq = df['period'].iloc[0].freq if len(df) > 0 else None
+        is_weekly = freq == 'W' if freq else num_points <= 10
+
+        if is_weekly:
+            self._format_week_axis(ax, pivot.index, num_points)
         else:
-            # Longer periods
-            ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
+            # Dynamic date formatting for daily data
+            if num_points <= 7:
+                ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
+                ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
+            elif num_points <= 31:
+                interval = max(1, num_points // 10)
+                ax.xaxis.set_major_locator(mdates.DayLocator(interval=interval))
+                ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
+            else:
+                ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
 
         fig.autofmt_xdate()
 
@@ -299,21 +332,23 @@ class MetricsVisualizer:
         # Dynamic date formatting based on number of data points
         num_points = len(cumulative.index)
 
-        if num_points <= 7:
-            # Daily data for a week or less
-            ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
-            ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
-        elif num_points <= 10:
-            # Could be weekly data (4-5 weeks) or daily data for ~10 days
-            ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
-        elif num_points <= 31:
-            # Daily data for a month
-            interval = max(1, num_points // 10)
-            ax.xaxis.set_major_locator(mdates.DayLocator(interval=interval))
-            ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
+        # Determine if this is weekly or daily data
+        freq = df['period'].iloc[0].freq if len(df) > 0 else None
+        is_weekly = freq == 'W' if freq else num_points <= 10
+
+        if is_weekly:
+            self._format_week_axis(ax, cumulative.index, num_points)
         else:
-            # Longer periods
-            ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
+            # Dynamic date formatting for daily data
+            if num_points <= 7:
+                ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
+                ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
+            elif num_points <= 31:
+                interval = max(1, num_points // 10)
+                ax.xaxis.set_major_locator(mdates.DayLocator(interval=interval))
+                ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
+            else:
+                ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
 
         fig.autofmt_xdate()
 

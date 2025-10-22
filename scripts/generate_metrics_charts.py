@@ -12,17 +12,18 @@ NO AI ANALYSIS - Just raw metrics:
 
 import sys
 from pathlib import Path
-from datetime import datetime
 
-import pandas as pd
-import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
+import pandas as pd
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from data.name_unifier import NameUnifier
-from data.developer_colors import DeveloperColorMapper
+from config.team_config import team_config
+
+# Constants
+BAR_GROUP_WIDTH = 0.8  # Total width for grouped bar charts
 
 
 class MetricsVisualizer:
@@ -43,14 +44,13 @@ class MetricsVisualizer:
             prs_file: Path to PRs CSV
             linear_file: Path to Linear tickets CSV (optional)
             output_dir: Output directory for charts
-            name_config: Path to developer names config
+            name_config: Path to developer names config (for backwards compatibility)
         """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
 
-        # Initialize name unifier and color mapper
-        self.unifier = NameUnifier(name_config)
-        self.color_mapper = DeveloperColorMapper(name_config)
+        # Use centralized team config for names and colors
+        self.team_config = team_config
 
         # Load commits data
         if commits_file and Path(commits_file).exists():
@@ -82,7 +82,7 @@ class MetricsVisualizer:
         self.linear_df = None
 
     def _unify_names(self, df: pd.DataFrame, author_column: str) -> pd.DataFrame:
-        """Unify developer names using name config.
+        """Unify developer names using team config.
 
         Args:
             df: DataFrame with author column
@@ -93,18 +93,18 @@ class MetricsVisualizer:
         """
         df = df.copy()
 
-        # Determine which unification method to use based on column name
+        # Determine which source system based on column name
         if author_column == "author":  # GitHub handle
             df[author_column] = df[author_column].apply(
-                lambda x: self.unifier.unify(github_handle=x) if pd.notna(x) else x
+                lambda x: self.team_config.get_canonical_name(x, source="github") if pd.notna(x) else x
             )
         elif author_column == "author_name":  # Git name
             df[author_column] = df[author_column].apply(
-                lambda x: self.unifier.unify(git_name=x) if pd.notna(x) else x
+                lambda x: self.team_config.get_canonical_name(x, source="git") if pd.notna(x) else x
             )
         elif author_column == "assignee_name":  # Linear name
             df[author_column] = df[author_column].apply(
-                lambda x: self.unifier.unify(linear_name=x) if pd.notna(x) else x
+                lambda x: self.team_config.get_canonical_name(x, source="linear") if pd.notna(x) else x
             )
 
         return df
@@ -160,12 +160,12 @@ class MetricsVisualizer:
 
         # For commits: use on_main_branch column
         elif "on_main_branch" in df.columns:
-            filtered = df[df["on_main_branch"] == True]
+            filtered = df[df["on_main_branch"]]
             print(f"  Filtered to {len(filtered)} commits on main branches")
             return filtered
 
         # If no branch info, return all (shouldn't happen)
-        print(f"  ⚠️  No branch info found, using all data")
+        print("  ⚠️  No branch info found, using all data")
         return df
 
     def _aggregate_by_period(
@@ -231,7 +231,7 @@ class MetricsVisualizer:
 
         # Get color map for developers in this dataset
         developers = pivot.columns.tolist()
-        color_map = self.color_mapper.get_color_map(developers)
+        color_map = self.team_config.get_color_map(developers)
 
         # Create figure
         fig, ax = plt.subplots(figsize=(14, 7))
@@ -307,7 +307,7 @@ class MetricsVisualizer:
 
         # Get color map for developers in this dataset
         developers = cumulative.columns.tolist()
-        color_map = self.color_mapper.get_color_map(developers)
+        color_map = self.team_config.get_color_map(developers)
 
         # Create figure
         fig, ax = plt.subplots(figsize=(14, 7))
@@ -465,6 +465,353 @@ class MetricsVisualizer:
             f"prs_{freq.lower()}_size_cumulative.png"
         )
 
+    def _create_cycle_line_chart(
+        self,
+        cycle_df: pd.DataFrame,
+        metric_column: str,
+        title: str,
+        ylabel: str,
+        output_file: str
+    ):
+        """Create line chart for cycle metrics by developer.
+
+        Shows metric trends across cycles with one line per developer.
+        Automatically applies consistent developer colors across all charts.
+
+        Args:
+            cycle_df: DataFrame with cycle data including cycle_number,
+                     assignee_name, and the metric column
+            metric_column: Column to aggregate - 'count' for issue count
+                          or 'estimate' for story points
+            title: Chart title
+            ylabel: Y-axis label (e.g., "Number of Issues", "Story Points")
+            output_file: Output filename (saved to self.output_dir)
+
+        Returns:
+            None. Saves chart to file and prints confirmation message.
+        """
+        # Treat blank/zero estimates as XS (1 point) for story points charts
+        if metric_column == 'estimate':
+            # Fill NaN and 0 estimates with 1 point (XS)
+            cycle_df = cycle_df.copy()
+            cycle_df.loc[:, "estimate"] = cycle_df["estimate"].fillna(1).replace(0, 1)
+
+        # Group by cycle and assignee
+        if metric_column == 'count':
+            grouped = (
+                cycle_df.groupby(["cycle_number", "assignee_name"])
+                .size()
+                .reset_index(name="value")
+            )
+        else:  # sum estimates
+            grouped = (
+                cycle_df.groupby(["cycle_number", "assignee_name"])[metric_column]
+                .sum()
+                .reset_index(name="value")
+            )
+
+        # Pivot for line chart
+        pivot = grouped.pivot(
+            index="cycle_number", columns="assignee_name", values="value"
+        ).fillna(0)
+
+        # Get color map for developers
+        developers = pivot.columns.tolist()
+
+        # Protect against no developers
+        if len(developers) == 0:
+            print("⚠️  No developers with data for this chart")
+            return
+
+        color_map = self.team_config.get_color_map(developers)
+
+        # Create figure
+        fig, ax = plt.subplots(figsize=(14, 6))
+
+        # Plot lines for each developer
+        for developer in developers:
+            ax.plot(
+                pivot.index,
+                pivot[developer],
+                label=developer,
+                color=color_map[developer],
+                marker='o',
+                linewidth=2,
+                markersize=6,
+                alpha=0.8
+            )
+
+        # Configure axes
+        ax.set_title(title, fontsize=16, fontweight="bold", pad=20)
+        ax.set_xlabel("Cycle", fontsize=12)
+        ax.set_ylabel(ylabel, fontsize=12)
+        ax.set_xticks(pivot.index)
+        ax.set_xticklabels([f"Cycle {num}" for num in pivot.index], rotation=45, ha='right', fontsize=10)
+        ax.legend(title="Developer", bbox_to_anchor=(1.05, 1), loc="upper left")
+        ax.grid(True, alpha=0.3)
+
+        plt.tight_layout()
+        output_path = self.output_dir / output_file
+        plt.savefig(output_path, dpi=300, bbox_inches="tight")
+        print(f"✅ Saved: {output_path}")
+        plt.close()
+
+    def _create_cycle_completion_chart(
+        self,
+        cycle_df: pd.DataFrame,
+        output_file: str
+    ):
+        """Create line chart showing cycle completion percentage by developer.
+
+        Shows what percentage of started work was completed within each cycle.
+        Formula: (completed / started) * 100 for each developer per cycle.
+
+        Args:
+            cycle_df: DataFrame with cycle data including cycle_number, assignee_name,
+                     created_at, completed_at, cycle_start, cycle_end, state_type
+            output_file: Output filename (saved to self.output_dir)
+
+        Returns:
+            None. Saves chart to file and prints confirmation message.
+        """
+        # Calculate started issues per dev per cycle
+        started_df = cycle_df[
+            (cycle_df["created_at"] >= cycle_df["cycle_start"]) &
+            (cycle_df["created_at"] <= cycle_df["cycle_end"])
+        ]
+        started_counts = (
+            started_df.groupby(["cycle_number", "assignee_name"])
+            .size()
+            .reset_index(name="started")
+        )
+
+        # Calculate completed issues per dev per cycle
+        # Count both "completed" and "canceled" as finished (canceled = done but not delivered)
+        completed_df = cycle_df[
+            (cycle_df["state_type"].isin(["completed", "canceled"])) &
+            (cycle_df["completed_at"].notna()) &
+            (cycle_df["completed_at"] >= cycle_df["cycle_start"]) &
+            (cycle_df["completed_at"] <= cycle_df["cycle_end"])
+        ]
+        completed_counts = (
+            completed_df.groupby(["cycle_number", "assignee_name"])
+            .size()
+            .reset_index(name="completed")
+        )
+
+        # Merge started and completed counts
+        merged = pd.merge(
+            started_counts,
+            completed_counts,
+            on=["cycle_number", "assignee_name"],
+            how="outer"
+        ).fillna(0)
+
+        # Calculate completion rate
+        merged["completion_rate"] = (
+            (merged["completed"] / merged["started"] * 100)
+            .replace([float('inf'), -float('inf')], 0)
+            .fillna(0)
+        )
+
+        # Pivot for plotting
+        pivot = merged.pivot(
+            index="cycle_number",
+            columns="assignee_name",
+            values="completion_rate"
+        ).fillna(0)
+
+        # Get color map for developers
+        developers = pivot.columns.tolist()
+
+        # Protect against no developers
+        if len(developers) == 0:
+            print("⚠️  No developers with data for completion chart")
+            return
+
+        color_map = self.team_config.get_color_map(developers)
+
+        # Create figure
+        fig, ax = plt.subplots(figsize=(14, 6))
+
+        # Plot lines for each developer
+        for developer in developers:
+            ax.plot(
+                pivot.index,
+                pivot[developer],
+                label=developer,
+                color=color_map[developer],
+                marker='o',
+                linewidth=2,
+                markersize=6,
+                alpha=0.8
+            )
+
+        # Configure axes
+        ax.set_title(
+            "Cycle Completion Rate by Developer",
+            fontsize=16,
+            fontweight="bold",
+            pad=20
+        )
+        ax.set_xlabel("Cycle", fontsize=12)
+        ax.set_ylabel("Completion Rate (%)", fontsize=12)
+        # Dynamic Y-axis to accommodate completion rates >100%
+        # When teams complete carryover work, rates can exceed 100%
+        max_rate = pivot.max().max() if len(pivot) > 0 else 100
+        y_max = max(105, max_rate * 1.1)  # 10% headroom, minimum 105
+        ax.set_ylim(0, y_max)
+        ax.set_xticks(pivot.index)
+        ax.set_xticklabels([f"Cycle {num}" for num in pivot.index], rotation=45, ha='right', fontsize=10)
+        ax.legend(title="Developer", bbox_to_anchor=(1.05, 1), loc="upper left")
+        ax.grid(True, alpha=0.3)
+
+        plt.tight_layout()
+        output_path = self.output_dir / output_file
+        plt.savefig(output_path, dpi=300, bbox_inches="tight")
+        print(f"✅ Saved: {output_path}")
+        plt.close()
+
+    def generate_cycle_charts(self, cycle_csv_path: str, output_dir: str | None = None):
+        """Generate Linear cycle visualization charts.
+
+        Creates five line charts showing issue and point metrics by cycle:
+        - Issues Started in Each Cycle
+        - Story Points Started in Each Cycle
+        - Issues Completed in Each Cycle
+        - Story Points Completed in Each Cycle
+        - Cycle Completion Rate by Developer
+
+        Args:
+            cycle_csv_path: Path to Linear cycles CSV file. Must contain columns:
+                           cycle_number, assignee_name, created_at, completed_at,
+                           cycle_start, cycle_end, estimate, state_type
+            output_dir: Optional output directory override (defaults to self.output_dir)
+
+        Returns:
+            None. Generates charts and saves to output directory.
+        """
+        print("\n📊 Generating Linear cycle charts...")
+
+        # Load cycle data
+        cycle_path = Path(cycle_csv_path)
+        if not cycle_path.exists():
+            print(f"❌ Cycle data file not found: {cycle_csv_path}")
+            return
+
+        cycle_df = pd.read_csv(cycle_csv_path)
+        print(f"  Loaded {len(cycle_df)} cycle issues")
+
+        # Validate required columns
+        required_columns = [
+            "cycle_number", "assignee_name", "created_at", "completed_at",
+            "cycle_start", "cycle_end", "estimate", "state_type"
+        ]
+        missing = [col for col in required_columns if col not in cycle_df.columns]
+        if missing:
+            print(f"❌ Missing required columns: {', '.join(missing)}")
+            return
+
+        # Apply name unification BEFORE filtering
+        cycle_df["assignee_name"] = cycle_df["assignee_name"].apply(
+            lambda x: self.team_config.get_canonical_name(x, source="linear") if pd.notna(x) else None
+        )
+
+        # Filter for valid assignees
+        valid_df = cycle_df[cycle_df["assignee_name"].notna() & (cycle_df["assignee_name"] != "")].copy()
+        print(f"  Filtered to {len(valid_df)} issues with assignees")
+
+        if len(valid_df) == 0:
+            print("⚠️  No cycle data with valid assignees")
+            return
+
+        # Convert date columns
+        valid_df["created_at"] = pd.to_datetime(valid_df["created_at"], utc=True)
+        valid_df["completed_at"] = pd.to_datetime(valid_df["completed_at"], utc=True)
+        valid_df["cycle_start"] = pd.to_datetime(valid_df["cycle_start"], utc=True)
+        valid_df["cycle_end"] = pd.to_datetime(valid_df["cycle_end"], utc=True)
+
+        # Handle missing estimates (treat as 0)
+        valid_df["estimate"] = valid_df["estimate"].fillna(0)
+
+        # Set output directory if specified
+        original_output_dir = self.output_dir
+        if output_dir:
+            self.output_dir = Path(output_dir)
+            self.output_dir.mkdir(exist_ok=True)
+
+        try:
+            # Chart 1: Issues Started (created in cycle period)
+            started_df = valid_df[
+                (valid_df["created_at"] >= valid_df["cycle_start"]) &
+                (valid_df["created_at"] <= valid_df["cycle_end"])
+            ]
+            if len(started_df) > 0:
+                self._create_cycle_line_chart(
+                    started_df,
+                    "count",
+                    "Issues Started in Each Cycle by Developer",
+                    "Number of Issues",
+                    "cycle_issues_started.png"
+                )
+            else:
+                print("⚠️  No issues with creation dates in cycle periods")
+
+            # Chart 2: Points Started
+            if len(started_df) > 0:
+                self._create_cycle_line_chart(
+                    started_df,
+                    "estimate",
+                    "Story Points Started in Each Cycle by Developer",
+                    "Story Points",
+                    "cycle_points_started.png"
+                )
+
+            # Chart 3: Issues Completed (completed in cycle period)
+            # Count both "completed" and "canceled" as finished
+            completed_df = valid_df[
+                (valid_df["state_type"].isin(["completed", "canceled"])) &
+                (valid_df["completed_at"].notna()) &
+                (valid_df["completed_at"] >= valid_df["cycle_start"]) &
+                (valid_df["completed_at"] <= valid_df["cycle_end"])
+            ]
+            if len(completed_df) > 0:
+                self._create_cycle_line_chart(
+                    completed_df,
+                    "count",
+                    "Issues Completed in Each Cycle by Developer",
+                    "Number of Issues",
+                    "cycle_issues_completed.png"
+                )
+            else:
+                print("⚠️  No completed issues in cycle periods")
+
+            # Chart 4: Points Completed
+            if len(completed_df) > 0:
+                self._create_cycle_line_chart(
+                    completed_df,
+                    "estimate",
+                    "Story Points Completed in Each Cycle by Developer",
+                    "Story Points",
+                    "cycle_points_completed.png"
+                )
+
+            # Chart 5: Cycle Completion Rate (NEW)
+            if len(started_df) > 0 and len(completed_df) > 0:
+                self._create_cycle_completion_chart(
+                    valid_df,
+                    "cycle_completion_rate.png"
+                )
+            else:
+                print("⚠️  Not enough data for completion rate chart")
+
+            print("\n✅ Cycle charts generated successfully!")
+
+        finally:
+            # Restore original output directory
+            if output_dir:
+                self.output_dir = original_output_dir
+
     def generate_all_charts(self):
         """Generate all chart variations."""
         print("\n🎨 Generating all metrics charts...")
@@ -505,6 +852,11 @@ def main():
         help="Path to Linear tickets CSV file (optional)",
     )
     parser.add_argument(
+        "--cycles",
+        default=None,
+        help="Path to Linear cycles CSV file (optional)",
+    )
+    parser.add_argument(
         "--output",
         "-o",
         default="charts",
@@ -525,7 +877,13 @@ def main():
         args.output,
         args.name_config
     )
+
+    # Generate standard charts
     visualizer.generate_all_charts()
+
+    # Generate cycle charts if cycle data provided
+    if args.cycles:
+        visualizer.generate_cycle_charts(args.cycles, args.output)
 
 
 if __name__ == "__main__":

@@ -95,25 +95,19 @@ class MonitoringConfig(BaseModel):
     circuit_breakers: Dict[str, CircuitBreakerConfig] = Field(
         default_factory=lambda: {
             "anthropic_api": CircuitBreakerConfig(
-                failure_threshold=5,
-                recovery_timeout_seconds=60.0,
-                timeout_seconds=30.0
+                failure_threshold=5, recovery_timeout_seconds=60.0, timeout_seconds=30.0
             ),
             "github_api": CircuitBreakerConfig(
-                failure_threshold=3,
-                recovery_timeout_seconds=45.0,
-                timeout_seconds=20.0
+                failure_threshold=3, recovery_timeout_seconds=45.0, timeout_seconds=20.0
             ),
             "linear_api": CircuitBreakerConfig(
-                failure_threshold=3,
-                recovery_timeout_seconds=45.0,
-                timeout_seconds=20.0
+                failure_threshold=3, recovery_timeout_seconds=45.0, timeout_seconds=20.0
             ),
             "database": CircuitBreakerConfig(
                 failure_threshold=2,
                 success_threshold=2,
                 recovery_timeout_seconds=30.0,
-                timeout_seconds=10.0
+                timeout_seconds=10.0,
             ),
         }
     )

@@ -369,10 +369,7 @@ class LinearClient:
         return states_data.get("nodes", [])
 
     def get_cycles(
-        self,
-        team_key: str | None = None,
-        active_only: bool = False,
-        limit: int = 100
+        self, team_key: str | None = None, active_only: bool = False, limit: int = 100
     ) -> list[dict[str, Any]]:
         """Get cycles (sprints), optionally filtered by team.
 
@@ -391,17 +388,17 @@ class LinearClient:
             filters.append(f'team: {{ key: {{ eq: "{team_key}" }} }}')
 
         if active_only:
-            filters.append('isActive: { eq: true }')
+            filters.append("isActive: { eq: true }")
 
         if filters:
-            filter_str = f'filter: {{ {", ".join(filters)} }}, '
+            filter_str = f"filter: {{ {', '.join(filters)} }}, "
 
         all_cycles = []
         has_next_page = True
         end_cursor = None
 
         while has_next_page:
-            after_str = f', after: "{end_cursor}"' if end_cursor else ''
+            after_str = f', after: "{end_cursor}"' if end_cursor else ""
 
             query = f"""
             query {{
@@ -458,7 +455,7 @@ class LinearClient:
         end_cursor = None
 
         while has_next_page:
-            after_str = f', after: "{end_cursor}"' if end_cursor else ''
+            after_str = f', after: "{end_cursor}"' if end_cursor else ""
 
             query = f"""
             query GetCycleIssues($cycleId: String!) {{
@@ -513,7 +510,9 @@ class LinearClient:
             end_cursor = page_info.get("endCursor")
 
             if nodes:
-                logger.debug(f"Fetched {len(nodes)} issues for cycle {cycle_id} (total: {len(all_issues)})")
+                logger.debug(
+                    f"Fetched {len(nodes)} issues for cycle {cycle_id} (total: {len(all_issues)})"
+                )
 
         return all_issues
 

@@ -1,4 +1,5 @@
 """Hermod CLI - AI usage collection tool."""
+
 import json
 import logging
 import os
@@ -38,7 +39,9 @@ DAYS_MIN = 1
 DAYS_MAX = 365
 
 # Input validation patterns
-DEVELOPER_NAME_PATTERN = re.compile(rf'^[a-zA-Z0-9\s_-]{{{DEVELOPER_NAME_MIN_LENGTH},{DEVELOPER_NAME_MAX_LENGTH}}}$')
+DEVELOPER_NAME_PATTERN = re.compile(
+    rf"^[a-zA-Z0-9\s_-]{{{DEVELOPER_NAME_MIN_LENGTH},{DEVELOPER_NAME_MAX_LENGTH}}}$"
+)
 
 
 def version_callback(value: bool):
@@ -57,7 +60,7 @@ def main(
         help="Show version and exit",
         callback=version_callback,
         is_eager=True,
-    )
+    ),
 ):
     """Hermod - AI usage collection tool."""
     pass
@@ -104,7 +107,9 @@ def collect(
     if not all(deps.values()):
         missing = [tool for tool, installed in deps.items() if not installed]
         if json_output:
-            console.print(json.dumps({"error": f"Dependencies not installed: {', '.join(missing)}"}))
+            console.print(
+                json.dumps({"error": f"Dependencies not installed: {', '.join(missing)}"})
+            )
         else:
             console.print(f"[red]Error:[/red] The following dependencies are not installed:")
             for tool in missing:
@@ -170,7 +175,9 @@ def collect(
         console.print(json.dumps(output_data, indent=2))
     else:
         console.print(f"[green]✓[/green] Successfully collected usage data for {developer}")
-        console.print(f"[blue]Date range:[/blue] {data['metadata']['date_range']['start']} to {data['metadata']['date_range']['end']}")
+        console.print(
+            f"[blue]Date range:[/blue] {data['metadata']['date_range']['start']} to {data['metadata']['date_range']['end']}"
+        )
         console.print(f"[blue]Output file:[/blue] {output_file}")
 
         # Show summary table

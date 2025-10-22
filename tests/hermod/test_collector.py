@@ -1,4 +1,5 @@
 """Tests for AI usage data collection."""
+
 import pytest
 import subprocess
 from unittest.mock import patch, MagicMock
@@ -12,7 +13,7 @@ def test_collect_usage_success() -> None:
         # Mock ccusage response
         mock_run.side_effect = [
             {"daily": [{"date": "2025-01-22", "cost": 1.50}], "totals": {"totalCost": 1.50}},
-            {"daily": [{"date": "2025-01-22", "cost": 2.00}], "totals": {"totalCost": 2.00}}
+            {"daily": [{"date": "2025-01-22", "cost": 2.00}], "totals": {"totalCost": 2.00}},
         ]
 
         data = collect_usage("Chad", days=7)
@@ -31,7 +32,7 @@ def test_collect_usage_handles_errors() -> None:
         # First call succeeds, second fails
         mock_run.side_effect = [
             {"daily": [], "totals": {}},
-            {}  # Empty dict indicates error
+            {},  # Empty dict indicates error
         ]
 
         data = collect_usage("Chad", days=7)
@@ -48,7 +49,7 @@ def test_save_submission() -> None:
     test_data = {
         "metadata": {"developer": "Chad", "collected_at": "2025-01-22T10:00:00"},
         "claude_code": {},
-        "codex": {}
+        "codex": {},
     }
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -60,6 +61,7 @@ def test_save_submission() -> None:
 
         # Verify content
         import json
+
         with open(output_path) as f:
             loaded = json.load(f)
         assert loaded["metadata"]["developer"] == "Chad"

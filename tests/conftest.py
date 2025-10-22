@@ -43,17 +43,17 @@ def mock_cache_directory():
     """Provide a temporary cache directory for testing."""
     import shutil
     import tempfile
-    
+
     temp_dir = tempfile.mkdtemp()
     cache_dir = os.path.join(temp_dir, ".cache")
     os.makedirs(cache_dir, exist_ok=True)
-    
+
     # Create cache subdirectories
     for subdir in ["repos", "prs", "commits"]:
         os.makedirs(os.path.join(cache_dir, subdir), exist_ok=True)
-    
+
     yield cache_dir
-    
+
     # Cleanup
     shutil.rmtree(temp_dir, ignore_errors=True)
 
@@ -65,11 +65,7 @@ def mock_cache_entry():
         "cached_at": "2025-07-09T19:05:53Z",
         "ttl_seconds": 3600,
         "etag": "test-etag-123",
-        "data": {
-            "test": "data",
-            "number": 123,
-            "array": [1, 2, 3]
-        }
+        "data": {"test": "data", "number": 123, "array": [1, 2, 3]},
     }
 
 
@@ -82,24 +78,16 @@ def mock_extraction_data():
                 "name": "test-repo-1",
                 "full_name": "org/test-repo-1",
                 "archived": False,
-                "language": "Python"
+                "language": "Python",
             }
         ],
         "prs": [
-            {
-                "number": 123,
-                "title": "Test PR",
-                "state": "open",
-                "author": {"login": "testuser"}
-            }
+            {"number": 123, "title": "Test PR", "state": "open", "author": {"login": "testuser"}}
         ],
         "commits": [
             {
                 "sha": "abc123def456",
-                "commit": {
-                    "message": "Test commit",
-                    "author": {"name": "Test User"}
-                }
+                "commit": {"message": "Test commit", "author": {"name": "Test User"}},
             }
-        ]
+        ],
     }

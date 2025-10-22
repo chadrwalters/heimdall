@@ -1,4 +1,5 @@
 """External dependency checking for ccusage tools."""
+
 import logging
 import shutil
 from typing import Dict
@@ -43,10 +44,7 @@ def check_all_dependencies() -> Dict[str, bool]:
         >>> all(deps.values())
         True
     """
-    deps = {
-        "ccusage": check_ccusage_installed(),
-        "ccusage-codex": check_ccusage_codex_installed()
-    }
+    deps = {"ccusage": check_ccusage_installed(), "ccusage-codex": check_ccusage_codex_installed()}
 
     missing = [tool for tool, installed in deps.items() if not installed]
     if missing:

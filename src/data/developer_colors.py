@@ -1,4 +1,5 @@
 """Developer color mapping system for consistent visualization."""
+
 import json
 import hashlib
 from pathlib import Path
@@ -10,10 +11,26 @@ class DeveloperColorMapper:
 
     # Distinct, visually appealing color palette (20 colors for better distribution)
     COLOR_PALETTE = [
-        "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",  # Original 5
-        "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",  # Original 10
-        "#aec7e8", "#ffbb78", "#98df8a", "#ff9896", "#c5b0d5",  # +5 (15)
-        "#c49c94", "#f7b6d2", "#c7c7c7", "#dbdb8d", "#9edae5",  # +5 (20)
+        "#1f77b4",
+        "#ff7f0e",
+        "#2ca02c",
+        "#d62728",
+        "#9467bd",  # Original 5
+        "#8c564b",
+        "#e377c2",
+        "#7f7f7f",
+        "#bcbd22",
+        "#17becf",  # Original 10
+        "#aec7e8",
+        "#ffbb78",
+        "#98df8a",
+        "#ff9896",
+        "#c5b0d5",  # +5 (15)
+        "#c49c94",
+        "#f7b6d2",
+        "#c7c7c7",
+        "#dbdb8d",
+        "#9edae5",  # +5 (20)
     ]
 
     def __init__(self, config_path: str = "config/developer_names.json"):
@@ -42,10 +59,7 @@ class DeveloperColorMapper:
         self.color_map: Dict[str, str] = {}
 
         # Sort developers by canonical name for deterministic ordering
-        developers = sorted(
-            self.config["developers"],
-            key=lambda d: d["canonical_name"]
-        )
+        developers = sorted(self.config["developers"], key=lambda d: d["canonical_name"])
 
         for dev in developers:
             canonical = dev["canonical_name"]

@@ -103,152 +103,68 @@ help:
     @echo "  Development: just test all → just quality check"
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║                           ENVIRONMENT & SETUP                               ║
+# ║                          ENV - Environment Management                        ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
-# Initial project setup with comprehensive validation
-setup:
+# Initial project setup with UV
+env command *args:
+    @just env-{{command}} {{args}}
+
+# Set up development environment from scratch
+env-setup:
     @echo "🚀 Setting up GitHub Linear Metrics project..."
     @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @echo "🔍 Checking prerequisites..."
-    @which uv > /dev/null || (echo "❌ uv not found. Install with: curl -LsSf https://astral.sh/uv/install.sh | sh" && exit 1)
+    @which uv > /dev/null || (echo "❌ uv not found. Install: curl -LsSf https://astral.sh/uv/install.sh | sh" && exit 1)
     @echo "✅ UV found: $(uv --version)"
     @echo ""
-    @echo "📦 Setting up project with UV..."
+    @echo "📦 Installing dependencies..."
     @uv sync
-    @echo "✅ Dependencies installed and virtual environment ready"
+    @echo "✅ Dependencies installed"
     @echo ""
-    @echo "📁 Creating necessary directories..."
-    @mkdir -p {{ANALYSIS_DIR}} {{LOGS_DIR}}
-    @echo "✅ Project directories created"
+    @echo "📁 Creating directories..."
+    @mkdir -p {{CHARTS_DIR}} {{DATA_DIR}} logs
+    @echo "✅ Directories created"
     @echo ""
-    @echo "🧪 Running setup validation..."
-    @uv run python --version > /dev/null && echo "✅ Python environment working" || echo "❌ Python environment issue"
-    @uv run python -c "import logging; print('✅ Built-in imports working')" 2>/dev/null || echo "❌ Import issues detected"
-    @echo ""
-    @echo "✅ Setup complete!"
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @echo "🎯 Next steps:"
-    @echo "  1. Set up environment variables (copy .env.example to .env)"
-    @echo "  2. Run 'just env-check' to verify configuration"
-    @echo "  3. Run 'just verify-apis' to test API connections"
-    @echo "  4. Run 'just uv-status' to see detailed UV environment info"
-    @echo "  5. Run 'just extract-test your-org' to validate extraction works"
+    @echo "✅ Setup complete! Next steps:"
+    @echo "  1. Set up .env file with API keys"
+    @echo "  2. Run 'just env check' to verify configuration"
+    @echo "  3. Run 'just env verify-apis' to test connections"
 
 # Install development dependencies
-dev-setup:
+env-dev-setup:
     @echo "🛠️ Installing development dependencies..."
     @uv sync --group dev
     @echo "✅ Development dependencies installed"
 
-# Show environment variables status with security
+# Check environment variables status
 env-check:
     @echo "📋 Environment Variables Status:"
     @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @if [ -n "${GITHUB_TOKEN:-}" ]; then echo "GitHub Token: {{GREEN}}✅ Set{{NC}} (length: $${#GITHUB_TOKEN})"; else echo "GitHub Token: {{RED}}❌ Not set{{NC}}"; fi
+    @if [ -n "${GITHUB_TOKEN:-}" ]; then echo "GitHub Token: {{GREEN}}✅ Set{{NC}}"; else echo "GitHub Token: {{RED}}❌ Not set{{NC}}"; fi
     @if [ -n "${LINEAR_API_KEY:-}${LINEAR_TOKEN:-}" ]; then echo "Linear API Key: {{GREEN}}✅ Set{{NC}}"; else echo "Linear API Key: {{RED}}❌ Not set{{NC}}"; fi
     @if [ -n "${ANTHROPIC_API_KEY:-}" ]; then echo "Anthropic API Key: {{GREEN}}✅ Set{{NC}}"; else echo "Anthropic API Key: {{RED}}❌ Not set{{NC}}"; fi
-    @if [ -n "${ORGANIZATION_NAME:-}" ]; then echo "Organization: {{GREEN}}✅ Set{{NC}} (${ORGANIZATION_NAME})"; else echo "Organization: {{YELLOW}}⚠️ Not set{{NC}} (optional)"; fi
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# Verify all API connections with detailed output
-verify-apis:
+# Verify all API connections
+env-verify-apis:
     @echo "🔍 Verifying API connections..."
     @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     @uv run python scripts/verify_apis.py
 
 # Validate configuration files
-validate-config:
+env-validate-config:
     @echo "🔧 Validating configuration..."
     @uv run python scripts/test_config.py
 
-# Show UV environment status and configuration
-uv-status:
+# Show UV environment status
+env-status:
     @echo "🔍 UV Environment Status:"
     @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @echo "📦 UV Installation:"
-    @uv --version || echo "❌ UV not installed"
-    @echo ""
-    @echo "🔧 Project Environment:"
-    @if [ -d ".venv" ]; then echo "✅ Virtual environment: .venv/"; else echo "❌ No virtual environment found"; fi
-    @echo "📍 Environment Python:"
-    @uv run python --version 2>/dev/null || echo "❌ UV environment not working"
-    @echo "📍 Environment location:"
-    @uv run python -c "import sys; print(f'  {sys.executable}')" 2>/dev/null || echo "❌ Cannot determine Python path"
-    @echo ""
-    @echo "📊 Dependencies:"
-    @if [ -f "pyproject.toml" ]; then echo "✅ pyproject.toml found"; else echo "❌ No pyproject.toml"; fi
-    @if [ -f "uv.lock" ]; then echo "✅ uv.lock found"; else echo "⚠️  No uv.lock file"; fi
-    @echo ""
-    @echo "🧪 Import Test:"
-    @uv run python -c "import logging; print('✅ Built-in logging module works')" 2>/dev/null || echo "❌ Import issues detected"
-    @uv run python -c "from src.structured_logging import structured_logger; print('✅ Project modules work')" 2>/dev/null || echo "❌ Project import issues"
+    @echo "📦 UV: $(uv --version)"
+    @echo "🐍 Python: $(uv run python --version)"
+    @if [ -d ".venv" ]; then echo "✅ Virtual environment: .venv/"; else echo "❌ No .venv found"; fi
 
-# Test and fix import conflicts
-fix-imports:
-    @echo "🔧 Testing and fixing import conflicts..."
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @echo "🧪 Testing built-in modules:"
-    @uv run python -c "import logging, json, os, sys, datetime; print('✅ All built-in modules working')" || echo "❌ Built-in module import issues"
-    @echo ""
-    @echo "🧪 Testing project modules:"
-    @uv run python -c "from src.structured_logging.structured_logger import get_structured_logger; print('✅ structured_logging module working')" || echo "❌ structured_logging import issues"
-    @uv run python -c "from src.analysis.claude_client import ClaudeClient; print('✅ analysis modules working')" || echo "❌ analysis module import issues"
-    @uv run python -c "from src.git_extraction.simple_cli import main; print('✅ git_extraction modules working')" || echo "❌ git_extraction import issues"
-    @echo ""
-    @echo "📋 Import Conflict Check Results:"
-    @if uv run python -c "import logging; from src.structured_logging import structured_logger; print('✅ No import conflicts detected')" 2>/dev/null; then \
-        echo "✅ All imports working correctly - no conflicts found"; \
-    else \
-        echo "❌ Import conflicts detected - see troubleshooting guide:"; \
-        echo "   docs/troubleshooting/import-conflicts.md"; \
-    fi
-
-# Run test extraction to validate setup
-extract-test org="test-org":
-    @echo "🧪 Running test extraction for {{org}}..."
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @echo "ℹ️ This runs a minimal test extraction to validate setup"
-    @if [ "{{org}}" = "test-org" ]; then \
-        echo "⚠️  Using default test organization name"; \
-        echo "   Usage: just extract-test your-actual-org-name"; \
-    fi
-    @echo ""
-    @echo "🔍 Pre-flight checks:"
-    @just env-check
-    @echo ""
-    @echo "🚀 Running test extraction (1 day, simplified):"
-    @cd src && uv run python -m git_extraction.simple_cli --org {{org}} --days 1 || echo "❌ Test extraction failed"
-    @echo ""
-    @echo "📄 Generated files:"
-    @ls -la org_*.csv 2>/dev/null | head -5 || echo "No test files generated"
-    @echo ""
-    @echo "✅ Test extraction complete"
-
-# Clean up temporary files and artifacts
-cleanup-temp:
-    @echo "🧹 Cleaning up temporary files and artifacts..."
-    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    @echo "🗑️ Removing temporary files:"
-    @find . -name "*.pyc" -delete && echo "  ✅ Removed Python bytecode files"
-    @find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null && echo "  ✅ Removed __pycache__ directories" || true
-    @rm -f basic_extract.py extract_data.py simple_extract.py 2>/dev/null && echo "  ✅ Removed temporary wrapper scripts" || true
-    @rm -rf .pytest_cache/ 2>/dev/null && echo "  ✅ Removed pytest cache" || true
-    @rm -rf build/ dist/ *.egg-info/ 2>/dev/null && echo "  ✅ Removed build artifacts" || true
-    @echo ""
-    @echo "📁 Cleaning analysis outputs (keeping important files):"
-    @find . -name "test_*.csv" -delete 2>/dev/null && echo "  ✅ Removed test CSV files" || true
-    @find . -name "*_temp.csv" -delete 2>/dev/null && echo "  ✅ Removed temporary CSV files" || true
-    @find . -name "debug_*.log" -delete 2>/dev/null && echo "  ✅ Removed debug log files" || true
-    @echo ""
-    @echo "🔧 UV cache status:"
-    @echo "  Current cache size: $(du -sh ~/.cache/uv 2>/dev/null | cut -f1 || echo 'N/A')"
-    @echo "  Run 'uv cache clean' to clean UV cache if needed"
-    @echo ""
-    @echo "✅ Cleanup complete"
-
-# Clean build artifacts and temporary files
-clean:
+# Clean build artifacts
+env-clean:
     @echo "🧹 Cleaning build artifacts..."
     @rm -rf build/ dist/ *.egg-info/ .pytest_cache/ __pycache__/
     @find . -name "*.pyc" -delete
@@ -256,10 +172,10 @@ clean:
     @echo "✅ Clean complete"
 
 # Complete reset and setup
-fresh-start:
+env-fresh-start:
     @echo "🔄 Performing fresh start..."
-    @just clean
-    @just setup
+    @just env-clean
+    @just env-setup
     @echo "✅ Fresh start complete"
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗

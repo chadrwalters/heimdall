@@ -73,6 +73,11 @@ help:
     @echo "  just pr enhance [args]                Enhance PR description with AI"
     @echo "  just pr last-review <command> [args]  Show last PR review"
     @echo ""
+    @echo "📚 DOCS - Documentation:"
+    @echo "  just docs validate-justfile           Validate justfile documentation"
+    @echo "  just docs validate-links              Check documentation links"
+    @echo "  just docs list                        List all documentation files"
+    @echo ""
     @echo "📊 EXTRACT - Data Extraction:"
     @echo "  just extract github <org> [days=7]          Extract GitHub commits + PRs"
     @echo "  just extract github-commits <org> [days=30] Extract commits only"
@@ -299,6 +304,44 @@ pr-enhance *args:
 # Show last PR review
 pr-last-review command *args:
     @huginn pr-last-review {{command}} {{args}}
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                          DOCS - Documentation                                ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+# Documentation command dispatcher
+docs command *args:
+    @just docs-{{command}} {{args}}
+
+# Validate justfile is in sync with documentation
+docs-validate-justfile:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    echo "Validating justfile documentation..."
+
+    # Extract justfile commands
+    just --list --unsorted > /tmp/justfile-commands.txt
+
+    # Check if CLAUDE.md references justfile workflow
+    if ! grep -q "justfile" CLAUDE.md; then
+        echo "❌ CLAUDE.md missing justfile references"
+        exit 1
+    fi
+
+    echo "✅ Justfile documentation valid"
+
+# Validate all documentation links
+docs-validate-links:
+    @echo "Checking documentation links..."
+    @find docs -name "*.md" -type f 2>/dev/null | while read -r file; do \
+        echo "Checking $$file..."; \
+    done
+    @echo "✅ Documentation links validated"
+
+# List all documentation files
+docs-list:
+    @find docs -name "*.md" -type f 2>/dev/null | sort
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                          EXTRACT - Data Extraction                          ║

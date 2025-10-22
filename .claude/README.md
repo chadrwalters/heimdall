@@ -6,8 +6,17 @@ This directory contains custom Claude Desktop commands and agents for Heimdall d
 
 ### Git & Graphite
 
-- `/gt:commit` - Smart GT commit workflow with validation
+- `/gt:commit` - Smart GT commit workflow with validation, testing, and optional PR submission
+  - `/gt:commit --submit` - Commit and submit PR to stack
+  - `/gt:commit --submit --enhance` - Commit, submit, and AI-enhance PR title/description
 - `/gt:restack` - Safe GT restack operations
+
+### Pull Requests
+
+- `/pr:request-review <number>` - Request comprehensive code review with AI analysis
+  - Generates structured review request comments
+  - Mentions @claude and @codex for multi-perspective review
+  - Analyzes PR changes and provides context for reviewers
 
 ### Testing & Quality
 
@@ -35,6 +44,10 @@ This directory contains custom Claude Desktop commands and agents for Heimdall d
 ### Review & Analysis
 
 - `pr-review-expert` - PR review requests (model: haiku)
+- `pr-generator-expert` - AI-powered PR title/description generation (model: haiku)
+  - Uses huginn for consistent PR documentation
+  - Smart model selection based on complexity
+  - Integrates with GitHub CLI for automatic updates
 
 ## Usage
 

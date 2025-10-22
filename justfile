@@ -12,12 +12,13 @@
 #   just help               - Show all commands by activity
 #
 # 🔧 ACTIVITY NAMESPACES:
-#   extract  - Data extraction (GitHub, Linear)
-#   chart    - Visualization generation
-#   test     - Testing operations
-#   quality  - Code quality checks
-#   cache    - Cache management
-#   env      - Environment setup
+#   extract   - Data extraction (GitHub, Linear)
+#   chart     - Visualization generation
+#   ai-usage  - AI usage tracking
+#   test      - Testing operations
+#   quality   - Code quality checks
+#   cache     - Cache management
+#   env       - Environment setup
 
 # Variables
 PY_VERSION := "3.11"
@@ -48,10 +49,11 @@ help:
     @echo "╚══════════════════════════════════════════════════════════════════════════════╝"
     @echo ""
     @echo "🚀 QUICK START:"
-    @echo "  just env setup                    Set up environment from scratch"
-    @echo "  just env verify-apis              Verify GitHub, Linear, Anthropic APIs"
-    @echo "  just extract github <org> [days]  Extract GitHub data (default: 7 days)"
-    @echo "  just chart metrics <csv> <csv>    Generate metrics charts"
+    @echo "  just env setup                       Set up environment from scratch"
+    @echo "  just env verify-apis                 Verify GitHub, Linear, Anthropic APIs"
+    @echo "  just extract github <org> [days]     Extract GitHub data (default: 7 days)"
+    @echo "  just chart metrics <csv> <csv>       Generate metrics charts"
+    @echo "  just ai-usage collect <dev> [days=7] Track AI usage"
     @echo ""
     @echo "📊 EXTRACT - Data Extraction:"
     @echo "  just extract github <org> [days=7]          Extract GitHub commits + PRs"
@@ -64,6 +66,9 @@ help:
     @echo "📈 CHART - Visualization Generation:"
     @echo "  just chart metrics <commits> <prs> [output=charts]       Generate metrics charts"
     @echo "  just chart all <commits> <prs> <cycles> [output=charts]  Generate all charts (with cycles)"
+    @echo ""
+    @echo "🤖 AI-USAGE - AI Usage Tracking:"
+    @echo "  just ai-usage collect <developer> [days=7]  Collect ccusage + codex data"
     @echo ""
     @echo "🧪 TEST - Testing Operations:"
     @echo "  just test all             All tests with coverage"
@@ -265,6 +270,19 @@ chart-all commits prs cycles output="{{CHARTS_DIR}}":
     fi
     @echo ""
     @ls -1 {{output}}/*.png 2>/dev/null | wc -l | awk '{print "✅ Generated " $$1 " charts in {{output}}/"}' || echo "❌ No charts generated"
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                        AI-USAGE - AI Usage Tracking                         ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+# AI usage command dispatcher
+ai-usage command *args:
+    @just ai-usage-{{command}} {{args}}
+
+# Collect AI usage data (ccusage + ccusage-codex)
+ai-usage-collect developer days="7":
+    @echo "📊 Collecting AI usage for {{developer}} (last {{days}} days)..."
+    @uv run python scripts/collect_ai_usage.py {{developer}} {{days}}
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                            TEST - Testing Operations                         ║

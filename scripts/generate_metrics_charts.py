@@ -428,6 +428,9 @@ class MetricsVisualizer:
         merged_prs = self.prs_df[self.prs_df["merged_at"].notna()]
         main_prs = self._filter_main_branches(merged_prs, "merged_at")
 
+        # Explicit copy to avoid SettingWithCopyWarning
+        main_prs = main_prs.copy()
+
         # Calculate size
         main_prs["size"] = main_prs["additions"] + main_prs["deletions"]
 

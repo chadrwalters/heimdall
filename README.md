@@ -1,79 +1,176 @@
-# GitHub Linear Metrics
+# GitHub Metrics Visualization
 
-**AI-powered developer productivity analysis platform** that integrates GitHub commit data with Linear ticket management for comprehensive development insights.
+**Simple, production-ready metrics tracking** for developer activity across your GitHub organization.
 
 ---
 
 ## 🚀 Quick Start
 
 ```bash
-# Setup environment and verify APIs
+# Setup environment
 just setup
 just env-check
 just verify-apis
 
-# Run your first analysis
-just pilot your-organization-name
+# Extract last 30 days of data
+just extract your-organization 30
+
+# Generate visualizations
+just generate-charts
 ```
 
 **Generated Files:**
-- **org_prs.csv**: Raw GitHub data extraction
-- **analysis_results.csv**: AI-analyzed metrics with complexity/risk scores
-- **developer_metrics.csv**: Individual contributor analysis
+- **src/org_commits.csv**: All commits with branch tracking
+- **src/org_prs.csv**: All merged pull requests
+- **charts/*.png**: 12 time-series visualization charts
 
 ---
 
-## 📊 What It Analyzes
+## 📊 What It Tracks
 
 ### Core Metrics
-- **Work Type Classification**: Feature, Bug Fix, Refactor, Testing, Documentation, Chore
-- **Impact Scoring**: Complexity (40%) + Risk (50%) + Clarity (10%) = 1-10 scale
-- **Linear Integration**: Correlates commits with Linear tickets for process compliance
-- **Developer Productivity**: Individual and team contribution patterns
+- **Commit Activity**: Daily and weekly commit counts by developer
+- **Pull Requests**: Merged PR tracking and attribution
+- **Lines Changed**: Code additions and deletions over time
+- **Branch Tracking**: Shows only work merged to main/dev branches
+- **Team Contributions**: Individual and team activity patterns
 
-### AI-Powered Analysis
-- **Commit Classification**: Automatically categorizes work types using Claude AI
-- **Complexity Assessment**: Analyzes code changes for technical complexity
-- **Risk Evaluation**: Identifies high-risk changes and technical debt
-- **Quality Insights**: Code clarity and maintainability metrics
+### Data Sources
+- **GitHub API**: Repository and PR metadata
+- **Git History**: Direct git analysis for commit details
+- **Linear Integration**: Ticket correlation (optional)
+
+---
+
+## 📈 Generated Visualizations
+
+The system generates **12 charts** showing different views of team activity:
+
+### Commit Charts (6 charts)
+- **commits_d_count_stacked.png** - Daily commits by developer (stacked area)
+- **commits_d_count_cumulative.png** - Cumulative daily commits (line chart)
+- **commits_d_size_cumulative.png** - Cumulative lines changed daily
+- **commits_w_count_stacked.png** - Weekly commits by developer
+- **commits_w_count_cumulative.png** - Cumulative weekly commits
+- **commits_w_size_cumulative.png** - Cumulative lines changed weekly
+
+### PR Charts (6 charts)
+- **prs_d_count_stacked.png** - Daily PRs merged by developer (stacked area)
+- **prs_d_count_cumulative.png** - Cumulative daily PRs (line chart)
+- **prs_d_size_cumulative.png** - Cumulative lines changed in PRs daily
+- **prs_w_count_stacked.png** - Weekly PRs merged by developer
+- **prs_w_count_cumulative.png** - Cumulative weekly PRs
+- **prs_w_size_cumulative.png** - Cumulative lines changed in PRs weekly
+
+All charts are high-resolution PNG (300 DPI) ready for presentations and reports.
 
 ---
 
 ## 🎯 Use Cases
 
 ### Engineering Management
-- **Team Productivity**: Track velocity and work distribution
-- **Process Compliance**: Monitor GitHub ↔ Linear ticket correlation
-- **Impact Visibility**: Surface high-value engineering contributions
-- **Quality Trends**: Track code complexity and risk over time
+- **Team Velocity**: Track commit and PR volume trends
+- **Activity Patterns**: Understand work distribution across team
+- **Sprint Reviews**: Show delivered work in main/dev branches
+- **Progress Tracking**: Cumulative charts for milestone reporting
 
-### Individual Contributors
-- **Personal Metrics**: Understand your development patterns
-- **Impact Measurement**: Quantify technical contributions
-- **Growth Tracking**: Monitor complexity and quality improvements
+### Team Dashboards
+- **Weekly Reviews**: Generate charts for team meetings
+- **Monthly Reports**: Track progress over longer periods
+- **Contribution Visibility**: Surface individual contributions
+- **Process Insights**: Understand delivery patterns
 
-### Organizational Insights
-- **Cross-Team Analysis**: Compare productivity patterns
-- **Resource Allocation**: Data-driven planning and staffing
-- **Process Optimization**: Identify workflow improvement opportunities
+### Planning & Reporting
+- **Historical Analysis**: Review past development activity
+- **Capacity Planning**: Understand team output patterns
+- **Stakeholder Updates**: Visual reports of development work
+- **Trend Analysis**: Identify patterns and anomalies
+
+---
+
+## 🤖 AI Usage Tracking (Hermod)
+
+**Hermod** is a standalone CLI tool for tracking AI assistant usage across your team. It collects usage data from Claude Code and Codex, helping teams understand AI adoption and costs.
+
+### Quick Start
+
+```bash
+# Auto-detect developer from git and collect usage
+just ai-usage collect
+
+# Specify developer and time period
+just ai-usage collect Chad 14
+
+# Complete pipeline: collect → ingest → charts
+just ai-usage pipeline
+```
+
+### Features
+
+- **Auto-Detection**: Automatically detects developer from git configuration
+- **Dual Collection**: Tracks both Claude Code (`ccusage`) and Codex (`ccusage-codex`)
+- **Flexible Time Ranges**: Configure collection period (default: 7 days)
+- **Privacy-First**: Manual submission model - you control your data
+- **Rich Output**: Beautiful terminal tables or JSON for automation
+
+### Output
+
+Generates structured JSON files with usage metrics:
+
+```json
+{
+  "metadata": {
+    "developer": "Chad",
+    "date_range": {"start": "2025-10-15", "end": "2025-10-22", "days": 7}
+  },
+  "claude_code": {"totals": {"totalCost": 334.09, "totalTokens": 12500000}},
+  "codex": {"totals": {"totalCost": 50.25, "totalTokens": 2500000}}
+}
+```
+
+### Workflow
+
+1. **Collect**: Run weekly to gather usage data
+2. **Submit**: Share JSON file with team lead (manual)
+3. **Ingest**: Team lead consolidates submissions
+4. **Visualize**: Generate cost and token usage charts
+
+### Installation
+
+```bash
+# Install npm tools (prerequisites)
+npm install -g @anthropics/ccusage
+npm install -g codex-usage-cli
+
+# Hermod is already installed with the project
+hermod --version
+```
+
+📖 **Full Documentation**: [docs/hermod-installation.md](docs/hermod-installation.md)
 
 ---
 
 ## 🛠️ Development Workflows
 
-### Analysis Commands
+### Data Extraction
 ```bash
-# Quick 7-day analysis
-just pilot organization-name
+# Weekly extraction
+just extract your-org 7
 
-# Extended analysis
-just pipeline organization-name 30
+# Monthly extraction
+just extract your-org 30
 
-# Re-analyze existing data
-just analyze organization-name existing_data.csv
+# Custom time period
+just extract your-org 90
+```
 
-# Generate comprehensive reports
-just generate-reports analysis_results.csv
+### Chart Generation
+```bash
+# Generate all charts (default: src/org_commits.csv, src/org_prs.csv → charts/)
+just generate-charts
+
+# Specify custom files and output directory
+just generate-charts commits=data/commits.csv prs=data/prs.csv output=weekly_reports
 ```
 
 ### Testing & Quality
@@ -88,21 +185,7 @@ just test-unit
 just test-integration
 
 # Quality checks
-just quality-check
-```
-
-### System Management
-```bash
-# Health monitoring
-just status
-just health
-
-# Cache management
-just cache-status
-just git-status
-
-# Performance analysis
-just extract-stats organization-name
+just lint
 ```
 
 ---
@@ -111,78 +194,68 @@ just extract-stats organization-name
 
 ### Required Environment Variables
 ```bash
-# GitHub API access
+# GitHub API access (required)
 GITHUB_TOKEN=your_github_token_here
 
-# Linear integration
+# Linear integration (optional)
 LINEAR_API_KEY=your_linear_api_key_here
-
-# AI analysis
-ANTHROPIC_API_KEY=your_anthropic_api_key_here
-
-# Optional: default organization
-ORGANIZATION_NAME=your-org-name
 ```
 
-### Configuration Files
-- **config/ai_developers.json**: AI developer identification patterns
-- **config/analysis_state.json**: Analysis state tracking
-- **config/schedule.conf**: Automated analysis scheduling
+### Developer Name Unification
+The system automatically unifies developer identities using `config/developer_names.json`:
+
+```json
+{
+  "developers": [
+    {
+      "canonical_name": "Chad Walters",
+      "git_names": ["chadrwalters", "Chad Walters"],
+      "github_handle": "chadrwalters"
+    }
+  ]
+}
+```
+
+This ensures consistent attribution across all charts by mapping:
+- Git commit author names
+- GitHub pull request authors
+- Linear ticket assignees (if using Linear integration)
 
 ---
 
-## 📈 Understanding Results
+## 🔍 Key Features
 
-### Impact Score Scale (1-10)
-- **1-3**: Low impact (minor changes, bug fixes)
-- **4-6**: Moderate impact (feature work, refactoring)
-- **7-8**: High impact (major features, architecture)
-- **9-10**: Critical impact (foundational changes)
+### Branch Tracking
+Charts show **only main/dev branch activity**:
+- ✅ Commits merged to main, master, dev, or develop
+- ❌ Feature branch work not yet delivered
 
-### Work Type Categories
-- **New Feature**: Net new functionality development
-- **Bug Fix**: Issue resolution and corrections
-- **Refactor**: Code improvement without feature changes
-- **Testing**: Test additions and improvements
-- **Documentation**: Documentation updates and maintenance
-- **Chore**: Dependency updates, tooling, maintenance
+This provides a clean view of **actual shipped work**.
 
-### Linear Integration Metrics
-- **Ticket Correlation Rate**: Percentage of commits linked to Linear tickets
-- **Process Compliance**: Adherence to planned work vs. ad-hoc changes
-- **Sprint Alignment**: Actual work vs. sprint planning accuracy
+### Developer Attribution
+- Automatic name unification across git/GitHub/Linear
+- Consistent color coding per developer in charts
+- Handles multiple git identities per person
 
----
-
-## 🏗️ Architecture
-
-### Core Components
-- **Git-Based Extraction**: Revolutionary approach reducing API calls by 85-90%
-- **AI Analysis Engine**: Claude-powered work classification and scoring
-- **Linear Integration**: Automatic ticket correlation and process insights
-- **Caching System**: Intelligent caching for performance optimization
-
-### Technology Stack
-- **Python 3.11+**: Core analysis engine
-- **FastAPI**: REST API for integration and automation
-- **Git**: Direct repository analysis for performance
-- **Anthropic Claude**: AI-powered commit analysis
-- **Linear API**: Ticket correlation and workflow insights
+### Performance Optimized
+- Git-based extraction reduces API calls by 85-90%
+- Intelligent caching for faster repeated extractions
+- Local processing - no external services required
 
 ---
 
 ## 📚 Documentation
 
-### Quick Navigation
-- **📖 [Complete Documentation Hub](docs/INDEX.md)** - Navigate all documentation
-- **🚀 [Setup Guide](docs/setup-guide.md)** - Detailed environment setup
-- **📊 [Usage Guide](docs/usage-guide.md)** - Analysis workflows and interpretation
-- **🔧 [Configuration Reference](docs/configuration-reference.md)** - Complete configuration options
+### Quick Reference
+- **[CHARTS_README.md](CHARTS_README.md)** - Chart generation and interpretation
+- **[Setup Guide](docs/setup-guide.md)** - Detailed environment setup
+- **[Usage Guide](docs/usage-guide.md)** - Common workflows and patterns
 
-### Specialized Guides
-- **🤖 [AI Detection Methodology](docs/ai-detection-methodology.md)** - How AI classification works
-- **🔗 [Linear Integration Summary](docs/linear-integration-summary.md)** - Linear API integration details
-- **✅ [Validation Procedures](docs/validation-procedures.md)** - Testing and quality assurance
+### Advanced Topics
+- **[Linear Integration](docs/linear-integration-summary.md)** - Optional ticket correlation
+- **[AI Usage Tracking (Hermod)](docs/hermod-installation.md)** - Team AI usage collection and tracking
+- **[Validation Procedures](docs/validation-procedures.md)** - Testing and quality assurance
+- **[Configuration Reference](docs/configuration-reference.md)** - All configuration options
 
 ---
 
@@ -192,7 +265,6 @@ ORGANIZATION_NAME=your-org-name
 ```bash
 # Initial setup
 just setup
-just dev-setup
 
 # Verify environment
 just env-check
@@ -200,15 +272,14 @@ just verify-apis
 
 # Run tests
 just test
-just quality-check
 ```
 
 ### Development Workflow
-1. **Setup Environment**: `just setup && just dev-setup`
-2. **Make Changes**: Follow existing patterns and conventions
-3. **Test Changes**: `just test && just quality-check`
+1. **Setup Environment**: `just setup`
+2. **Make Changes**: Follow existing patterns
+3. **Test Changes**: `just test`
 4. **Validate APIs**: `just test-integration`
-5. **Submit Changes**: Create pull request with analysis validation
+5. **Submit Changes**: Create pull request
 
 ---
 
@@ -217,13 +288,13 @@ just quality-check
 ### Data Protection
 - **API Key Security**: Keys never logged or exposed in outputs
 - **Local Processing**: All analysis performed locally
-- **Minimal Data Collection**: Only analyzes commit metadata and diffs
+- **Minimal Data Collection**: Only commit metadata and PR info
 - **No Code Storage**: Repository content not permanently stored
 
 ### Privacy Considerations
 - **Opt-in Analysis**: Explicit organization selection required
 - **Configurable Scope**: Control which repositories are analyzed
-- **Data Retention**: Local control over analysis data lifecycle
+- **Data Retention**: Local control over data lifecycle
 
 ---
 
@@ -233,18 +304,12 @@ just quality-check
 - **85-90% API Reduction**: Dramatically reduced rate limiting
 - **Faster Analysis**: Local git operations vs. API calls
 - **Better Reliability**: No network dependencies for cached data
-- **Cost Efficiency**: Reduced API usage and infrastructure costs
+- **Cost Efficiency**: Reduced API usage
 
-### Benchmarking
-```bash
-# Performance analysis
-just extract-stats organization-name
-just benchmark-extraction organization-name
-
-# Load testing
-just test-load-quick
-just test-load-full
-```
+### Typical Performance
+- **30-day extraction**: 2-5 minutes for 10-20 repositories
+- **Chart generation**: 5-10 seconds for all 12 charts
+- **Organization-wide**: Scales to 100+ repositories
 
 ---
 
@@ -253,15 +318,14 @@ just test-load-full
 ### Common Issues
 - **Setup Problems**: See [Setup Guide](docs/setup-guide.md)
 - **API Issues**: Run `just verify-apis` for diagnostics
-- **Performance**: Check `just cache-status` and `just git-status`
-- **Analysis Errors**: Review logs with `just logs` command
+- **Missing Data**: Verify organization access permissions
+- **Chart Errors**: Check CSV file format and content
 
 ### Getting Help
 - **Environment Check**: `just env-check`
-- **System Health**: `just health`
-- **Documentation**: [Complete Documentation Hub](docs/INDEX.md)
-- **Troubleshooting**: [Validation Procedures](docs/validation-procedures.md)
+- **API Verification**: `just verify-apis`
+- **Documentation**: [CHARTS_README.md](CHARTS_README.md)
 
 ---
 
-**🎯 Ready to start?** Run `just setup` to begin analyzing your organization's developer productivity!
+**🎯 Ready to start?** Run `just setup && just verify-apis` to begin tracking your team's development activity!

@@ -10,7 +10,6 @@ Creates visualizations for:
 
 import json
 import sys
-from datetime import datetime
 from pathlib import Path
 
 import matplotlib.dates as mdates
@@ -70,32 +69,36 @@ class AIUsageVisualizer:
                 with open(json_file) as f:
                     data = json.load(f)
 
-                developer = data['developer']
+                developer = data["developer"]
 
-                for day in data['days']:
-                    date = day['date']
+                for day in data["days"]:
+                    date = day["date"]
 
                     # Process Claude Code data
-                    if day.get('claude_code'):
-                        cc_data = day['claude_code']
-                        all_records.append({
-                            'date': date,
-                            'developer': developer,
-                            'source': 'claude_code',
-                            'cost': cc_data.get('totalCost', 0),
-                            'tokens': cc_data.get('totalTokens', 0)
-                        })
+                    if day.get("claude_code"):
+                        cc_data = day["claude_code"]
+                        all_records.append(
+                            {
+                                "date": date,
+                                "developer": developer,
+                                "source": "claude_code",
+                                "cost": cc_data.get("totalCost", 0),
+                                "tokens": cc_data.get("totalTokens", 0),
+                            }
+                        )
 
                     # Process Codex data
-                    if day.get('codex'):
-                        codex_data = day['codex']
-                        all_records.append({
-                            'date': date,
-                            'developer': developer,
-                            'source': 'codex',
-                            'cost': codex_data.get('costUSD', 0),
-                            'tokens': codex_data.get('totalTokens', 0)
-                        })
+                    if day.get("codex"):
+                        codex_data = day["codex"]
+                        all_records.append(
+                            {
+                                "date": date,
+                                "developer": developer,
+                                "source": "codex",
+                                "cost": codex_data.get("costUSD", 0),
+                                "tokens": codex_data.get("totalTokens", 0),
+                            }
+                        )
 
             except Exception as e:
                 print(f"⚠️  Error loading {json_file.name}: {e}")
@@ -107,12 +110,12 @@ class AIUsageVisualizer:
 
         df = pd.DataFrame(all_records)
         # Handle mixed date formats (Claude Code: "2025-10-21", Codex: "Oct 22, 2025")
-        df['date'] = pd.to_datetime(df['date'], format='mixed')
+        df["date"] = pd.to_datetime(df["date"], format="mixed")
         print(f"  ✅ Loaded {len(df)} records from {len(df['developer'].unique())} developers")
 
         return df
 
-    def _aggregate_by_period(self, freq: str = 'D') -> pd.DataFrame:
+    def _aggregate_by_period(self, freq: str = "D") -> pd.DataFrame:
         """Aggregate data by period (daily or weekly).
 
         Args:
@@ -122,15 +125,14 @@ class AIUsageVisualizer:
             DataFrame with aggregated costs and tokens per developer per period
         """
         df = self.df.copy()
-        df['period'] = df['date'].dt.to_period(freq)
+        df["period"] = df["date"].dt.to_period(freq)
 
         # Aggregate by developer and period (combining Claude Code + Codex)
-        aggregated = df.groupby(['period', 'developer']).agg({
-            'cost': 'sum',
-            'tokens': 'sum'
-        }).reset_index()
+        aggregated = (
+            df.groupby(["period", "developer"]).agg({"cost": "sum", "tokens": "sum"}).reset_index()
+        )
 
-        aggregated['date'] = aggregated['period'].dt.to_timestamp()
+        aggregated["date"] = aggregated["period"].dt.to_timestamp()
 
         return aggregated
 
@@ -141,7 +143,7 @@ class AIUsageVisualizer:
         title: str,
         ylabel: str,
         filename: str,
-        is_weekly: bool = False
+        is_weekly: bool = False,
     ):
         """Create line chart for costs or tokens.
 
@@ -154,7 +156,7 @@ class AIUsageVisualizer:
             is_weekly: Whether this is weekly data (affects formatting)
         """
         # Pivot for line chart
-        pivot = df.pivot(index='date', columns='developer', values=value_col).fillna(0)
+        pivot = df.pivot(index="date", columns="developer", values=value_col).fillna(0)
 
         # Get color map
         developers = pivot.columns.tolist()
@@ -172,14 +174,14 @@ class AIUsageVisualizer:
                 color=color_map[developer],
                 alpha=0.8,
                 linewidth=2,
-                marker='o',
-                markersize=4
+                marker="o",
+                markersize=4,
             )
 
-        ax.set_title(title, fontsize=16, fontweight='bold', pad=20)
-        ax.set_xlabel('Date', fontsize=12)
+        ax.set_title(title, fontsize=16, fontweight="bold", pad=20)
+        ax.set_xlabel("Date", fontsize=12)
         ax.set_ylabel(ylabel, fontsize=12)
-        ax.legend(title='Developer', bbox_to_anchor=(1.05, 1), loc='upper left')
+        ax.legend(title="Developer", bbox_to_anchor=(1.05, 1), loc="upper left")
         ax.grid(True, alpha=0.3)
 
         # Format axes
@@ -189,23 +191,23 @@ class AIUsageVisualizer:
             num_points = len(pivot.index)
             if num_points <= 7:
                 ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
-                ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %d'))
+                ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
             elif num_points <= 31:
                 interval = max(1, num_points // 10)
                 ax.xaxis.set_major_locator(mdates.DayLocator(interval=interval))
-                ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %d'))
+                ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
             else:
-                ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %d'))
+                ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
 
         # Special formatting for cost (add dollar sign)
-        if value_col == 'cost':
-            ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f'${y:.2f}'))
+        if value_col == "cost":
+            ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"${y:.2f}"))
 
         fig.autofmt_xdate()
         plt.tight_layout()
 
         output_path = self.output_dir / filename
-        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.savefig(output_path, dpi=300, bbox_inches="tight")
         print(f"✅ Saved: {output_path}")
         plt.close()
 
@@ -227,7 +229,7 @@ class AIUsageVisualizer:
             week_end = date + pd.Timedelta(days=6)
             labels.append(f"{week_start.strftime('%b %d')}-{week_end.strftime('%d')}")
 
-        ax.set_xticklabels(labels, rotation=45, ha='right')
+        ax.set_xticklabels(labels, rotation=45, ha="right")
 
     def _create_stacked_bar_chart(
         self,
@@ -236,7 +238,7 @@ class AIUsageVisualizer:
         title: str,
         ylabel: str,
         filename: str,
-        is_weekly: bool = False
+        is_weekly: bool = False,
     ):
         """Create stacked bar chart showing source breakdown.
 
@@ -250,11 +252,7 @@ class AIUsageVisualizer:
         """
         # Pivot with source as columns
         pivot = df.pivot_table(
-            index='date',
-            columns='source',
-            values=value_col,
-            aggfunc='sum',
-            fill_value=0
+            index="date", columns="source", values=value_col, aggfunc="sum", fill_value=0
         )
 
         # Create figure
@@ -262,19 +260,19 @@ class AIUsageVisualizer:
 
         # Stacked bar chart
         pivot.plot(
-            kind='bar',
+            kind="bar",
             stacked=True,
             ax=ax,
-            color=['#1f77b4', '#ff7f0e'],  # Blue for Claude Code, Orange for Codex
+            color=["#1f77b4", "#ff7f0e"],  # Blue for Claude Code, Orange for Codex
             alpha=0.8,
-            width=0.8
+            width=0.8,
         )
 
-        ax.set_title(title, fontsize=16, fontweight='bold', pad=20)
-        ax.set_xlabel('Date', fontsize=12)
+        ax.set_title(title, fontsize=16, fontweight="bold", pad=20)
+        ax.set_xlabel("Date", fontsize=12)
         ax.set_ylabel(ylabel, fontsize=12)
-        ax.legend(title='Source', labels=['Claude Code', 'Codex'])
-        ax.grid(True, alpha=0.3, axis='y')
+        ax.legend(title="Source", labels=["Claude Code", "Codex"])
+        ax.grid(True, alpha=0.3, axis="y")
 
         # Format x-axis labels
         if is_weekly:
@@ -283,18 +281,18 @@ class AIUsageVisualizer:
                 week_start = date
                 week_end = date + pd.Timedelta(days=6)
                 labels.append(f"{week_start.strftime('%b %d')}-{week_end.strftime('%d')}")
-            ax.set_xticklabels(labels, rotation=45, ha='right')
+            ax.set_xticklabels(labels, rotation=45, ha="right")
         else:
-            ax.set_xticklabels([d.strftime('%b %d') for d in pivot.index], rotation=45, ha='right')
+            ax.set_xticklabels([d.strftime("%b %d") for d in pivot.index], rotation=45, ha="right")
 
         # Special formatting for cost
-        if value_col == 'cost':
-            ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f'${y:.2f}'))
+        if value_col == "cost":
+            ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"${y:.2f}"))
 
         plt.tight_layout()
 
         output_path = self.output_dir / filename
-        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.savefig(output_path, dpi=300, bbox_inches="tight")
         print(f"✅ Saved: {output_path}")
         plt.close()
 
@@ -304,82 +302,84 @@ class AIUsageVisualizer:
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
         # Daily aggregation
-        daily = self._aggregate_by_period('D')
+        daily = self._aggregate_by_period("D")
 
         # Weekly aggregation
-        weekly = self._aggregate_by_period('W')
+        weekly = self._aggregate_by_period("W")
 
         # Daily cost per developer
         self._create_line_chart(
             daily,
-            'cost',
-            'Daily AI Usage Cost per Developer (Claude Code + Codex)',
-            'Cost ($)',
-            'ai_usage_daily_cost.png',
-            is_weekly=False
+            "cost",
+            "Daily AI Usage Cost per Developer (Claude Code + Codex)",
+            "Cost ($)",
+            "ai_usage_daily_cost.png",
+            is_weekly=False,
         )
 
         # Weekly cost per developer
         self._create_line_chart(
             weekly,
-            'cost',
-            'Weekly AI Usage Cost per Developer (Claude Code + Codex)',
-            'Cost ($)',
-            'ai_usage_weekly_cost.png',
-            is_weekly=True
+            "cost",
+            "Weekly AI Usage Cost per Developer (Claude Code + Codex)",
+            "Cost ($)",
+            "ai_usage_weekly_cost.png",
+            is_weekly=True,
         )
 
         # Daily tokens per developer
         self._create_line_chart(
             daily,
-            'tokens',
-            'Daily AI Token Usage per Developer (Claude Code + Codex)',
-            'Total Tokens',
-            'ai_usage_daily_tokens.png',
-            is_weekly=False
+            "tokens",
+            "Daily AI Token Usage per Developer (Claude Code + Codex)",
+            "Total Tokens",
+            "ai_usage_daily_tokens.png",
+            is_weekly=False,
         )
 
         # Weekly tokens per developer
         self._create_line_chart(
             weekly,
-            'tokens',
-            'Weekly AI Token Usage per Developer (Claude Code + Codex)',
-            'Total Tokens',
-            'ai_usage_weekly_tokens.png',
-            is_weekly=True
+            "tokens",
+            "Weekly AI Token Usage per Developer (Claude Code + Codex)",
+            "Total Tokens",
+            "ai_usage_weekly_tokens.png",
+            is_weekly=True,
         )
 
         # Stacked bar charts showing source breakdown
         daily_with_source = self.df.copy()
-        daily_with_source['date'] = daily_with_source['date'].dt.to_period('D').dt.to_timestamp()
-        daily_grouped = daily_with_source.groupby(['date', 'source']).agg({
-            'cost': 'sum',
-            'tokens': 'sum'
-        }).reset_index()
+        daily_with_source["date"] = daily_with_source["date"].dt.to_period("D").dt.to_timestamp()
+        daily_grouped = (
+            daily_with_source.groupby(["date", "source"])
+            .agg({"cost": "sum", "tokens": "sum"})
+            .reset_index()
+        )
 
         self._create_stacked_bar_chart(
             daily_grouped,
-            'cost',
-            'Daily AI Usage Cost by Source (Organization Total)',
-            'Cost ($)',
-            'ai_usage_daily_cost_by_source.png',
-            is_weekly=False
+            "cost",
+            "Daily AI Usage Cost by Source (Organization Total)",
+            "Cost ($)",
+            "ai_usage_daily_cost_by_source.png",
+            is_weekly=False,
         )
 
         weekly_with_source = self.df.copy()
-        weekly_with_source['date'] = weekly_with_source['date'].dt.to_period('W').dt.to_timestamp()
-        weekly_grouped = weekly_with_source.groupby(['date', 'source']).agg({
-            'cost': 'sum',
-            'tokens': 'sum'
-        }).reset_index()
+        weekly_with_source["date"] = weekly_with_source["date"].dt.to_period("W").dt.to_timestamp()
+        weekly_grouped = (
+            weekly_with_source.groupby(["date", "source"])
+            .agg({"cost": "sum", "tokens": "sum"})
+            .reset_index()
+        )
 
         self._create_stacked_bar_chart(
             weekly_grouped,
-            'cost',
-            'Weekly AI Usage Cost by Source (Organization Total)',
-            'Cost ($)',
-            'ai_usage_weekly_cost_by_source.png',
-            is_weekly=True
+            "cost",
+            "Weekly AI Usage Cost by Source (Organization Total)",
+            "Cost ($)",
+            "ai_usage_weekly_cost_by_source.png",
+            is_weekly=True,
         )
 
         print("\n✅ All charts generated successfully!")

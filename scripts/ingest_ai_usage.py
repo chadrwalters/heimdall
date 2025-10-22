@@ -14,7 +14,7 @@ import sys
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
 
 def load_submissions(submissions_dir: Path) -> List[Dict[str, Any]]:
@@ -224,7 +224,7 @@ def main():
     print("\n💾 Writing ingested data...")
     write_ingested_data(deduplicated, output_dir)
 
-    print(f"\n✅ Ingestion complete!")
+    print("\n✅ Ingestion complete!")
     print(f"   Output: {output_dir}")
 
 

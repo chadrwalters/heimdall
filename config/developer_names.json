@@ -1,34 +1,58 @@
 {
   "developers": [
     {
-      "canonical_name": "Chad Walters",
+      "canonical_name": "Chad",
       "git_names": ["Chad Walters", "chadrwalters"],
       "github_handles": ["chadrwalters"],
       "linear_names": ["Chad Walters"]
     },
     {
-      "canonical_name": "EJ",
+      "canonical_name": "Eugene",
       "git_names": ["ejhg", "Eugene", "Eugene De Hoyos"],
       "github_handles": ["ejhg"],
-      "linear_names": ["EJ", "ejhg"]
+      "linear_names": ["EJ", "ejhg", "eugene.de.hoyos@campusiq.com"]
     },
     {
       "canonical_name": "Jeremiah",
       "git_names": ["jeremiahdegreeanalytics", "Jeremiah Smith"],
       "github_handles": ["jeremiahdegreeanalytics"],
-      "linear_names": ["Jeremiah"]
+      "linear_names": ["Jeremiah", "jeremiah@degreeanalytics.com"]
     },
     {
-      "canonical_name": "JP",
+      "canonical_name": "Josh Park",
       "git_names": ["jparkypark", "Joshua Park"],
       "github_handles": ["jparkypark"],
-      "linear_names": ["JP", "jparkypark"]
+      "linear_names": ["JP", "jparkypark", "josh.park@campusiq.com"]
     },
     {
-      "canonical_name": "Matt Kindy",
+      "canonical_name": "Kindy",
       "git_names": ["mattkindy", "Matt Kindy"],
       "github_handles": ["mattkindy"],
-      "linear_names": ["Matt Kindy", "mattkindy"]
+      "linear_names": ["Matt Kindy", "mattkindy", "matt.kindy@degreeanalytics.com"]
+    },
+    {
+      "canonical_name": "Todd",
+      "git_names": ["Todd Hoffman", "toddahoffman"],
+      "github_handles": ["toddahoffman"],
+      "linear_names": ["Todd Hoffman"]
+    },
+    {
+      "canonical_name": "Aaron",
+      "git_names": [],
+      "github_handles": [],
+      "linear_names": ["Aaron", "aaron@degreeanalytics.com"]
+    },
+    {
+      "canonical_name": "Elliott",
+      "git_names": [],
+      "github_handles": [],
+      "linear_names": ["Elliott", "elliott.hinson@degreeanalytics.com"]
+    },
+    {
+      "canonical_name": "Qasim",
+      "git_names": [],
+      "github_handles": [],
+      "linear_names": ["Qasim", "qasim.iqbal@degreeanalytics.com"]
     }
   ]
 }

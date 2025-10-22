@@ -1,6 +1,6 @@
 name: CI
 
-# Run CI on pull requests and pushes to main
+# Heimdall CI Pipeline - Run on pull requests and pushes to main
 on:
   push:
     branches: [main]

@@ -1,6 +1,6 @@
-# GitHub Metrics Visualization
+# Heimdall - Engineering Observability Framework
 
-**Simple, production-ready metrics tracking** for developer activity across your GitHub organization.
+**Heimdall observes and analyzes developer productivity** across your GitHub organization. Named after the all-seeing Norse god, Heimdall provides comprehensive visibility into engineering metrics and team activity.
 
 ---
 

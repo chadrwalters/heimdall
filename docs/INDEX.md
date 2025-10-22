@@ -1,7 +1,7 @@
-# GitHub Metrics Visualization Documentation Hub
+# Heimdall Documentation Hub
 
 ## Purpose
-Central navigation hub for GitHub Metrics Visualization - a simple, production-ready metrics tracking system for developer activity across GitHub organizations.
+Central navigation hub for Heimdall - a comprehensive engineering observability framework for tracking developer productivity across organizations.
 
 ## When to Use This
 - Finding specific documentation quickly
@@ -9,13 +9,13 @@ Central navigation hub for GitHub Metrics Visualization - a simple, production-r
 - Onboarding new team members
 - Setting up data extraction and visualization
 
-**Keywords:** navigation, index, documentation map, getting started, metrics visualization, charts
+**Keywords:** navigation, index, documentation map, getting started, heimdall, engineering observability
 
-Welcome to the comprehensive documentation hub for **GitHub Metrics Visualization** - a simple, production-ready system for tracking developer activity through commits and pull requests.
+Welcome to the comprehensive documentation hub for **Heimdall** - named after the all-seeing Norse god, Heimdall provides complete visibility into engineering metrics and team activity through commits and pull requests.
 
-**🏗️ Current Status**: Production-ready metrics visualization system
+**🏗️ Current Status**: Production-ready engineering observability framework
 **📅 Last Updated**: 2025-10-22
-**🔧 Latest Updates**: Simplified to metrics-only system, removed AI analysis features
+**🔧 Latest Updates**: Rebranded to Heimdall, focus on comprehensive observability
 
 ---
 

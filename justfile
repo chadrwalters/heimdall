@@ -1,28 +1,28 @@
 # ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║                GitHub Linear Metrics Development Justfile                   ║
+# ║              GitHub Linear Metrics - Activity-Based Commands                ║
 # ║                                                                              ║
-# ║ 🌟 AI-powered developer productivity analytics framework                    ║
-# ║ 📊 Analyzes GitHub commits with Linear ticket integration                   ║
-# ║ 🔗 Integrates GitHub, Linear, and Anthropic Claude APIs                     ║
-# ║ 📈 Generates actionable metrics for developer productivity                   ║
+# ║ 🎯 Focus: Extract data → Generate charts                                    ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 #
 # 📖 QUICK START:
-#   just setup           - Set up development environment from scratch
-#   just env-check       - Verify API keys and environment status
-#   just pilot <org>     - Run 7-day pilot analysis for organization
-#   just help            - Show detailed help and command groups
+#   just env setup          - Initial environment setup
+#   just env verify-apis    - Test API connections
+#   just extract github <org> 30  - Extract GitHub data
+#   just chart metrics commits.csv prs.csv  - Generate charts
+#   just help               - Show all commands by activity
 #
-# 🔧 COMMON WORKFLOWS:
-#   Setup:      just setup → just env-check → just verify-apis
-#   Analysis:   just pilot <org> → just pipeline <org> 30
-#   Testing:    just test → just test-unit → just test-integration
-#   Quality:    just lint → just format → just coverage
-#
-# 📋 Type 'just' or 'just help' to see all available commands organized by category
+# 🔧 ACTIVITY NAMESPACES:
+#   extract  - Data extraction (GitHub, Linear)
+#   chart    - Visualization generation
+#   test     - Testing operations
+#   quality  - Code quality checks
+#   cache    - Cache management
+#   env      - Environment setup
 
 # Variables
 PY_VERSION := "3.11"
+CHARTS_DIR := "charts"
+DATA_DIR := "data"
 ANALYSIS_DIR := "analysis_results"
 LOGS_DIR := "logs"
 
@@ -31,11 +31,9 @@ RED := "\\033[0;31m"
 GREEN := "\\033[0;32m"
 YELLOW := "\\033[1;33m"
 BLUE := "\\033[0;34m"
-PURPLE := "\\033[0;35m"
-CYAN := "\\033[0;36m"
 NC := "\\033[0m" # No Color
 
-# Default task - shows organized help instead of raw list
+# Default - show help
 _default:
     @just help
 
@@ -86,6 +84,11 @@ help:
     @echo "    generate-reports <input>   Generate comprehensive reports from analysis"
     @echo "    export-metrics <input>     Export metrics in various formats"
     @echo "    compare-periods <org>      Compare different time periods"
+    @echo ""
+    @echo "  Linear Integration:"
+    @echo "    extract-linear-cycles <team>           Extract Linear cycle/sprint data"
+    @echo "    generate-charts-all                    Generate all charts including cycles"
+    @echo "    pipeline-with-linear <org> <days> <team>  Full pipeline with Linear integration"
     @echo ""
     @echo "🧪 TESTING & QUALITY (Coverage Always Included):"
     @echo "  Core Testing:"
@@ -351,6 +354,37 @@ extract org days="7":
     @ls -la org_*.csv 2>/dev/null || echo "No output files generated"
     @echo "✅ Extraction complete for {{org}}"
 
+# Extract ONLY git commits (test git extraction separately)
+extract-commits org days="30":
+    @echo "📊 Extracting GIT COMMITS for {{org}} ({{days}} days)..."
+    @uv run python scripts/test_commits_extraction.py {{org}} {{days}}
+
+# Extract ONLY PRs via GitHub API (test PR extraction separately)
+extract-prs org days="30":
+    @echo "📊 Extracting GITHUB PRs for {{org}} ({{days}} days)..."
+    @uv run python scripts/test_prs_extraction.py {{org}} {{days}}
+
+# Extract ONLY Linear tickets
+extract-linear org days="30":
+    @echo "📊 Extracting LINEAR tickets for {{org}} ({{days}} days)..."
+    @uv run python scripts/test_linear_extraction.py {{org}} {{days}}
+
+# Extract Linear cycle data for team
+extract-linear-cycles team="ENG" output="linear_cycles.csv":
+    @echo "📊 Extracting Linear cycle data for team {{team}}..."
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @echo "  Team: {{team}}"
+    @echo "  Output: {{output}}"
+    @echo ""
+    @uv run python scripts/extract_linear_cycles.py --team {{team}} --output {{output}}
+    @echo ""
+    @if [ -f "{{output}}" ]; then \
+        echo "✅ Cycle data extracted to {{output}}"; \
+        wc -l {{output}} | awk '{print "  📄 " $$1-1 " cycle issues extracted"}'; \
+    else \
+        echo "❌ Extraction failed - no output file generated"; \
+    fi
+
 # Run incremental extraction (automatically handled by git-based approach)
 extract-incremental org:
     @echo "📊 Running incremental extraction for {{org}}..."
@@ -396,6 +430,39 @@ pipeline org days:
     @just generate-reports
     @echo "✅ Pipeline complete for {{org}} (git-based extraction used)"
 
+# Full pipeline with Linear cycle integration
+pipeline-with-linear org days team="ENG":
+    @echo "🔄 Running full pipeline with Linear integration for {{org}} ({{days}} days)..."
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @if [ {{days}} -gt 60 ]; then echo "⚠️  Large pipeline ({{days}} days) - this may take significant time"; fi
+    @echo ""
+    @echo "🔍 Pre-flight checks..."
+    @just verify-apis
+    @echo ""
+    @echo "📊 Step 1/5: Extracting GitHub data (git-based)..."
+    @just extract {{org}} {{days}}
+    @echo ""
+    @echo "📊 Step 2/5: Extracting Linear cycle data..."
+    @just extract-linear-cycles {{team}} linear_cycles.csv
+    @echo ""
+    @echo "🧠 Step 3/5: Running AI analysis..."
+    @just analyze {{org}}
+    @echo ""
+    @echo "📈 Step 4/5: Generating comprehensive reports..."
+    @just generate-reports
+    @echo ""
+    @echo "📊 Step 5/5: Generating all charts (including cycles)..."
+    @just generate-charts-all src/org_commits.csv src/org_prs.csv linear_cycles.csv charts
+    @echo ""
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @echo "✅ Complete pipeline finished for {{org}}"
+    @echo ""
+    @echo "📂 Outputs:"
+    @echo "  📄 GitHub data: src/org_commits.csv, src/org_prs.csv"
+    @echo "  📄 Linear data: linear_cycles.csv"
+    @echo "  📄 Analysis: analysis_results.csv"
+    @echo "  📊 Charts: charts/*.png"
+
 # Analyze extracted data
 analyze org input="org_prs.csv":
     @echo "🧠 Running AI analysis on {{input}}..."
@@ -411,6 +478,33 @@ reanalyze org input:
 generate-reports input="analysis_results.csv":
     @echo "📈 Generating reports from {{input}}..."
     @uv run python scripts/generate_reports.py {{input}}
+
+# Generate metrics visualization charts
+generate-charts commits="src/org_commits.csv" prs="src/org_prs.csv" output="charts":
+    @echo "📊 Generating metrics charts..."
+    @echo "  Commits: {{commits}}"
+    @echo "  PRs: {{prs}}"
+    @echo "  Output: {{output}}"
+    @uv run python scripts/generate_metrics_charts.py --commits {{commits}} --prs {{prs}} --output {{output}}
+    @echo "✅ Charts generated in {{output}}/"
+
+# Generate all metrics charts including Linear cycles
+generate-charts-all commits="src/org_commits.csv" prs="src/org_prs.csv" cycles="" output="charts":
+    @echo "📊 Generating comprehensive metrics charts..."
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @echo "  Commits: {{commits}}"
+    @echo "  PRs: {{prs}}"
+    @if [ -n "{{cycles}}" ]; then echo "  Cycles: {{cycles}}"; fi
+    @echo "  Output: {{output}}"
+    @echo ""
+    @if [ -n "{{cycles}}" ] && [ -f "{{cycles}}" ]; then \
+        uv run python scripts/generate_metrics_charts.py --commits {{commits}} --prs {{prs}} --cycles {{cycles}} --output {{output}}; \
+    else \
+        uv run python scripts/generate_metrics_charts.py --commits {{commits}} --prs {{prs}} --output {{output}}; \
+    fi
+    @echo ""
+    @echo "📈 Generated charts:"
+    @ls -1 {{output}}/*.png 2>/dev/null | wc -l | awk '{print "  ✅ " $$1 " charts generated"}' || echo "  ❌ No charts generated"
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                             TESTING & QUALITY                              ║

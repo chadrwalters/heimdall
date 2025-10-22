@@ -78,6 +78,11 @@ help:
     @echo "  just docs validate-links              Check documentation links"
     @echo "  just docs list                        List all documentation files"
     @echo ""
+    @echo "🎫 LINEAR - Linear Integration:"
+    @echo "  just linear test                      Test Linear API connection"
+    @echo "  just linear cycles <start> <end>      Extract Linear cycles for date range"
+    @echo "  just linear env                       Show Linear environment variables"
+    @echo ""
     @echo "📊 EXTRACT - Data Extraction:"
     @echo "  just extract github <org> [days=7]          Extract GitHub commits + PRs"
     @echo "  just extract github-commits <org> [days=30] Extract commits only"
@@ -342,6 +347,29 @@ docs-validate-links:
 # List all documentation files
 docs-list:
     @find docs -name "*.md" -type f 2>/dev/null | sort
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                          LINEAR - Linear Integration                        ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+# Linear command dispatcher
+linear command *args:
+    @just linear-{{command}} {{args}}
+
+# Test Linear API connection
+linear-test:
+    @echo "Testing Linear API connection..."
+    @uv run python -c "from src.linear.linear_client import LinearClient; import os; client = LinearClient(os.getenv('LINEAR_API_KEY')); print('✅ Linear API connected')"
+
+# Extract Linear cycles for date range
+linear-cycles start end:
+    @echo "📊 Extracting Linear cycles from {{start}} to {{end}}..."
+    @uv run python scripts/extract_linear_cycles.py --start-date {{start}} --end-date {{end}}
+
+# Show Linear environment variables
+linear-env:
+    @echo "LINEAR_API_KEY: $(echo $$LINEAR_API_KEY | head -c 10)..."
+    @echo "LINEAR_TEAM_ID: $$LINEAR_TEAM_ID"
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                          EXTRACT - Data Extraction                          ║

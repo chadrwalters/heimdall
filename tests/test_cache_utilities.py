@@ -16,10 +16,11 @@ class TestCacheUtilities:
         self.temp_dir = tempfile.mkdtemp()
         self.cache_dir = os.path.join(self.temp_dir, ".cache")
         os.makedirs(self.cache_dir, exist_ok=True)
-    
+
     def teardown_method(self):
         """Cleanup test environment."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_cache_file_structure(self):
@@ -28,11 +29,11 @@ class TestCacheUtilities:
         repos_dir = os.path.join(self.cache_dir, "repos")
         prs_dir = os.path.join(self.cache_dir, "prs")
         commits_dir = os.path.join(self.cache_dir, "commits")
-        
+
         os.makedirs(repos_dir, exist_ok=True)
         os.makedirs(prs_dir, exist_ok=True)
         os.makedirs(commits_dir, exist_ok=True)
-        
+
         assert os.path.exists(repos_dir)
         assert os.path.exists(prs_dir)
         assert os.path.exists(commits_dir)
@@ -44,9 +45,9 @@ class TestCacheUtilities:
             "cached_at": "2025-07-09T19:05:53Z",
             "ttl_seconds": 3600,
             "etag": "test-etag",
-            "data": {"test": "data"}
+            "data": {"test": "data"},
         }
-        
+
         # Verify required fields
         assert "cached_at" in cache_entry
         assert "ttl_seconds" in cache_entry
@@ -57,22 +58,22 @@ class TestCacheUtilities:
     def test_cache_ttl_validation(self):
         """Test TTL validation logic."""
         from datetime import datetime
-        
+
         # Test valid cache (not expired)
         valid_cache = {
             "cached_at": datetime.utcnow().isoformat() + "Z",
             "ttl_seconds": 3600,
-            "data": {"test": "data"}
+            "data": {"test": "data"},
         }
-        
+
         # Test expired cache
         expired_time = datetime.utcnow() - timedelta(hours=2)
         expired_cache = {
             "cached_at": expired_time.isoformat() + "Z",
             "ttl_seconds": 3600,
-            "data": {"test": "data"}
+            "data": {"test": "data"},
         }
-        
+
         # Cache should be valid if created recently
         assert valid_cache["ttl_seconds"] > 0
         # Cache should be expired if created 2 hours ago with 1 hour TTL
@@ -86,7 +87,7 @@ class TestCacheUtilities:
             ("prs", "repo_list_p1", ".cache/prs/repo_list_p1.json"),
             ("commits", "repo_page_1", ".cache/commits/repo_page_1.json"),
         ]
-        
+
         for resource_type, resource_key, expected_path in test_cases:
             expected_path = expected_path.replace(".cache", self.cache_dir)
             # This would be the logic from get_cache_path function
@@ -105,22 +106,22 @@ class TestExtractionScriptCaching:
                 "cache_exists": True,
                 "cache_valid": True,
                 "expected_api_calls": 0,
-                "expected_cache_hits": 1
+                "expected_cache_hits": 1,
             },
             {
                 "cache_exists": True,
                 "cache_valid": False,
                 "expected_api_calls": 1,
-                "expected_cache_hits": 0
+                "expected_cache_hits": 0,
             },
             {
                 "cache_exists": False,
                 "cache_valid": False,
                 "expected_api_calls": 1,
-                "expected_cache_hits": 0
-            }
+                "expected_cache_hits": 0,
+            },
         ]
-        
+
         for scenario in cache_scenarios:
             # This would test the extraction script logic
             assert scenario["expected_api_calls"] >= 0
@@ -130,20 +131,20 @@ class TestExtractionScriptCaching:
         """Test commit extraction caching logic."""
         # Test commit caching with 24-hour TTL
         ttl_seconds = 86400  # 24 hours
-        
+
         # Mock commit data
         commit_data = {
             "sha": "abc123",
             "author": {"login": "user1"},
-            "commit": {"message": "Test commit"}
+            "commit": {"message": "Test commit"},
         }
-        
+
         cache_entry = {
             "cached_at": datetime.utcnow().isoformat() + "Z",
             "ttl_seconds": ttl_seconds,
-            "data": commit_data
+            "data": commit_data,
         }
-        
+
         # Verify cache structure
         assert cache_entry["ttl_seconds"] == 86400
         assert "sha" in cache_entry["data"]
@@ -152,23 +153,23 @@ class TestExtractionScriptCaching:
         """Test repository list caching logic."""
         # Test repo list caching with 6-hour TTL
         ttl_seconds = 21600  # 6 hours
-        
+
         # Mock repository data
         repo_data = [
             {
                 "name": "test-repo",
                 "full_name": "org/test-repo",
                 "archived": False,
-                "language": "Python"
+                "language": "Python",
             }
         ]
-        
+
         cache_entry = {
             "cached_at": datetime.utcnow().isoformat() + "Z",
             "ttl_seconds": ttl_seconds,
-            "data": repo_data
+            "data": repo_data,
         }
-        
+
         # Verify cache structure
         assert cache_entry["ttl_seconds"] == 21600
         assert isinstance(cache_entry["data"], list)
@@ -185,9 +186,9 @@ class TestCacheManagement:
             "total_files": 10,
             "total_size_mb": 5.2,
             "cache_hit_rate": 0.85,
-            "api_calls_saved": 150
+            "api_calls_saved": 150,
         }
-        
+
         # Verify statistics format
         assert stats["total_files"] >= 0
         assert stats["total_size_mb"] >= 0
@@ -200,9 +201,9 @@ class TestCacheManagement:
         cleanup_scenarios = [
             {"files_before": 20, "expired_files": 5, "files_after": 15},
             {"files_before": 0, "expired_files": 0, "files_after": 0},
-            {"files_before": 10, "expired_files": 10, "files_after": 0}
+            {"files_before": 10, "expired_files": 10, "files_after": 0},
         ]
-        
+
         for scenario in cleanup_scenarios:
             files_cleaned = scenario["files_before"] - scenario["files_after"]
             assert files_cleaned == scenario["expired_files"]
@@ -213,28 +214,28 @@ class TestCacheManagement:
         valid_cache = {
             "cached_at": "2025-07-09T19:05:53Z",
             "ttl_seconds": 3600,
-            "data": {"valid": "json"}
+            "data": {"valid": "json"},
         }
-        
+
         # Test invalid JSON would fail validation
         invalid_cache = "invalid json string"
-        
+
         # Valid cache should pass JSON validation
         try:
             json.dumps(valid_cache)
             json_valid = True
-        except:
+        except Exception:
             json_valid = False
-        
+
         assert json_valid is True
-        
+
         # Invalid cache should fail JSON validation
         try:
             json.loads(invalid_cache)
             invalid_json_valid = True
-        except:
+        except Exception:
             invalid_json_valid = False
-        
+
         assert invalid_json_valid is False
 
 
@@ -249,14 +250,9 @@ class TestCacheIntegration:
         # 2. Fetch from API if needed
         # 3. Store in cache
         # 4. Retrieve from cache on subsequent calls
-        
-        workflow_steps = [
-            "check_cache",
-            "fetch_from_api",
-            "store_in_cache",
-            "retrieve_from_cache"
-        ]
-        
+
+        workflow_steps = ["check_cache", "fetch_from_api", "store_in_cache", "retrieve_from_cache"]
+
         # Verify workflow steps are defined
         assert len(workflow_steps) == 4
         assert "check_cache" in workflow_steps
@@ -268,22 +264,14 @@ class TestCacheIntegration:
         """Test cache performance impact."""
         # Mock performance metrics
         performance_metrics = {
-            "without_cache": {
-                "api_calls": 100,
-                "duration_seconds": 120,
-                "rate_limit_hits": 5
-            },
-            "with_cache": {
-                "api_calls": 20,
-                "duration_seconds": 30,
-                "rate_limit_hits": 0
-            }
+            "without_cache": {"api_calls": 100, "duration_seconds": 120, "rate_limit_hits": 5},
+            "with_cache": {"api_calls": 20, "duration_seconds": 30, "rate_limit_hits": 0},
         }
-        
+
         # Verify performance improvements
         without_cache = performance_metrics["without_cache"]
         with_cache = performance_metrics["with_cache"]
-        
+
         assert with_cache["api_calls"] < without_cache["api_calls"]
         assert with_cache["duration_seconds"] < without_cache["duration_seconds"]
         assert with_cache["rate_limit_hits"] <= without_cache["rate_limit_hits"]
@@ -295,12 +283,12 @@ class TestCacheIntegration:
             "id": 123,
             "title": "Test PR",
             "state": "open",
-            "created_at": "2025-07-09T19:05:53Z"
+            "created_at": "2025-07-09T19:05:53Z",
         }
-        
+
         # Simulate cache round-trip
         cached_data = json.loads(json.dumps(original_data))
-        
+
         # Verify data integrity
         assert cached_data == original_data
         assert cached_data["id"] == 123

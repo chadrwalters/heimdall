@@ -55,6 +55,13 @@ help:
     @echo "  just chart metrics <csv> <csv>       Generate metrics charts"
     @echo "  just ai-usage collect [dev] [days=7] Track AI usage (auto-detects dev)"
     @echo ""
+    @echo "🔧 GIT - Git Utilities:"
+    @echo "  just git branch                       Show current branch"
+    @echo "  just git commits [count=10]           Show recent commits with graph"
+    @echo "  just git status                       Show git status (short format)"
+    @echo "  just git info                         Show detailed git information"
+    @echo "  just git diff [args]                  Show git diff"
+    @echo ""
     @echo "🔀 PR - Pull Request Operations:"
     @echo "  just pr request-review [args]         Request PR review with AI context"
     @echo "  just pr enhance [args]                Enhance PR description with AI"
@@ -206,6 +213,38 @@ env-fresh-start:
     @just env-clean
     @just env-setup
     @echo "✅ Fresh start complete"
+
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                          GIT - Git Utilities                                 ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+# Git command dispatcher
+git command *args:
+    @just git-{{command}} {{args}}
+
+# Show current branch information
+git-branch:
+    @git rev-parse --abbrev-ref HEAD
+
+# Show recent commits with formatting
+git-commits count='10':
+    @git log --oneline --decorate --graph -n {{count}}
+
+# Show git status with enhanced formatting
+git-status:
+    @git status --short --branch
+
+# Show detailed git information
+git-info:
+    @echo "Branch: $(git rev-parse --abbrev-ref HEAD)"
+    @echo "Commit: $(git rev-parse --short HEAD)"
+    @echo "Remote: $(git remote get-url origin)"
+    @echo "Status:"
+    @git status --short
+
+# Show git diff with context
+git-diff *args:
+    @git diff {{args}}
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                          PR - Pull Request Operations                       ║
